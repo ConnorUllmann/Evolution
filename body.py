@@ -96,6 +96,12 @@ class Body(Lifeform):
         Screen.Instance.AddUpdateFunction(self, self.Update)
         Screen.Instance.AddRenderFunction(self, self.Render)
 
+    def HasHeart(self):
+        for part in self.parts:
+            if type(part).__name__ == "Heart":
+                return True
+        return False
+
     def speed2(self):
         return LengthSq(Scale(self.momentum, 1/self.mass))
     def speed(self):
@@ -138,7 +144,9 @@ class Body(Lifeform):
         if other in self.bannedMates:
             return None
         self.bannedMates.append(other)
-        return Body(((self.x + other.x) / 2, (self.y + other.y) / 2), [self, other])
+        child = Body(((self.x + other.x) / 2, (self.y + other.y) / 2), [self, other])
+        self.bannedMates.append(child)
+        return child
 
     def SubtractLife(self, amount):
         self.life -= amount
@@ -169,6 +177,9 @@ class Body(Lifeform):
         self.Physics()
         self.Bounds()
 
+        if not self.HasHeart():
+            self.SubtractLife(10000)
+
     def Render(self):
         self.color = (0, min(max(255 * self.life / self.lifeStart, 0), 255), 0)
         Screen.DrawCircle((self.x, self.y), int(self.radius*0.8), self.color)
@@ -197,7 +208,7 @@ def PreGame():
 ##        "maturation_period":[[2], [1, 50]]
 ##        })
  #   body.PrintGenes()
-    for i in range(0, 20):
+    for i in range(0, 40):
         body = Body((randint(0, Screen.Width()), randint(0, Screen.Height())), [])
 
 def UpdateGame():

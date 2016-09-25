@@ -31,11 +31,11 @@ class Lifeform:
             DNA.append(bit)
 
         v = random()
-        if v <= 0.025:
-            if len(DNA) > Lifeform.TRAITS["structure"]["min_length"]:
+        if v <= 0.1:
+            if len(DNA) > Lifeform.TRAITS[trait]["min_length"]:
                 DNA.pop()
-        elif v >= 1 - 0.025:
-            DNA.append(randint(Lifeform.TRAITS["structure"]["min"], Lifeform.TRAITS["structure"]["max"]))
+        elif v >= 1 - 0.1:
+            DNA.append(randint(Lifeform.TRAITS[trait]["min"], Lifeform.TRAITS[trait]["max"]))
         
         return DNA
 

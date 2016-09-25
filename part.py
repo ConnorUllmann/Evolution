@@ -111,7 +111,7 @@ class Bone(Part):
 
 class Heart(Part):
     def __init__(self, position, body, radius, partProperty):
-        super().__init__(position, body, radius, 250)
+        super().__init__(position, body, radius, 1000)
         self.color = (255, 0, 255)
         #print("Heart: [{}]".format(partProperty))
 
@@ -132,7 +132,7 @@ class Gills(Part):
     def Update(self):
         super().Update()
         #print("Forever: {}".format(100 * self.body.speed2()))
-        self.body.AddLife(100 * self.body.speed2())
+        self.body.AddLife(500 * self.body.speed2())
 
         
 class Propellor(Part):
