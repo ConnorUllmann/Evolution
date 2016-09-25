@@ -3,105 +3,82 @@ from gene import Gene
 
 class Lifeform:
 
-    DNA_LENGTH = 10
-
-    BASE_TRAITS = [
-        "size",
-        "speed",
-        "turnspeed",
-        "acceleration"
-    ]
+    TRAITS = {
+        "structure":{"start_length":9, "min_length":2, "min":0, "max":5},
+        "speed":{"start_length":3, "min_length":1, "min":0, "max":1},
+        "life":{"start_length":4, "min_length":1, "min":3000, "max":50000},
+        "maturation_period":{"start_length":1, "min_length":1, "min":2, "max":4}
+    }
 
     @staticmethod
-    def GenerateDNARandom():
-        DNA = ""
-        for i in range(0, Lifeform.DNA_LENGTH):
-            DNA = "{0}{1}".format(DNA, int(round(random())))
+    def GenerateDNARandom(trait):
+        DNA = []
+        info = Lifeform.TRAITS[trait]
+        for i in range(0, info["start_length"]):
+            DNA.append(randint(info["min"], info["max"]))
         return DNA
 
     @staticmethod
-    def GenerateDNAFromParents(parents):
+    def GenerateDNAFromParents(trait, parents):
         shuffle(parents)
-        DNA = ""
+        DNA = []
         parentIndex = 0
-        for i in range(0, len(parents[0].DNA)):
-            while i >= len(parents[parentIndex].DNA):
+        for i in range(0, len(parents[0].genes[trait].DNA)):
+            while i >= len(parents[parentIndex].genes[trait].DNA):
                 parentIndex = (parentIndex + 1) % len(parents)
-            bit = parents[parentIndex].DNA[i]
+            bit = parents[parentIndex].genes[trait].DNA[i]
             parentIndex = (parentIndex + 1) % len(parents)
-            DNA = "{0}{1}".format(DNA, int(bit))
+            DNA.append(bit)
+
+        v = random()
+        if v <= 0.025:
+            if len(DNA) > Lifeform.TRAITS["structure"]["min_length"]:
+                DNA.pop()
+        elif v >= 1 - 0.025:
+            DNA.append(randint(Lifeform.TRAITS["structure"]["min"], Lifeform.TRAITS["structure"]["max"]))
+        
         return DNA
 
     @staticmethod
-    def GenerateDNA(parents):
-        if parents is not None and len(parents) > 0:
-            return Lifeform.GenerateDNAFromParents(parents)
-        else:
-            return Lifeform.GenerateDNARandom()
-
-    @staticmethod
-    def GenerateGenesRandom(DNA):
+    def GenerateGenesRandom():
         genes = {}
-        for trait in Lifeform.BASE_TRAITS:
-            genes[trait] = Gene(DNA)
+        for trait in Lifeform.TRAITS:
+            DNA = Lifeform.GenerateDNARandom(trait)
+            valueRange = [Lifeform.TRAITS[trait]["min"],Lifeform.TRAITS[trait]["max"]]
+            genes[trait] = Gene(trait, DNA, valueRange)
         return genes
 
     @staticmethod
-    def GenerateTraitsFromParents(parents):
-        traits = {}
+    def GenerateGenesFromParents(parents):
+        genes = {}
+        traitsDict = {}
         for parent in parents:
             for trait in parent.genes:
-                traits[trait] = True
-        return list(traits.keys())
-
-    @staticmethod
-    def GenerateBasesForTraitFromParents(trait, parents):
-        basesReturn = []
-        parentsWithTrait = []
-        for parent in parents:
-            if trait in parent.genes:
-                parentsWithTrait.append(parent)
-
-        baseCountBounds = [None, None]
-        for parent in parentsWithTrait:
-            parentBaseCount = len(parent.genes[trait].bases)
-            if baseCountBounds[0] is None or parentBaseCount < baseCountBounds[0]:
-                baseCountBounds[0] = parentBaseCount
-            if baseCountBounds[1] is None or parentBaseCount > baseCountBounds[1]:
-                baseCountBounds[1] = parentBaseCount
-        baseCountBounds[0] = max(baseCountBounds[0] - 1, Gene.MIN_GENE_LENGTH)
-        baseCountBounds[1] = min(baseCountBounds[1] + 1, Gene.MAX_GENE_LENGTH)
-
-        baseCount = randint(baseCountBounds[0], baseCountBounds[1])
-
-        bases = {}
-        for parent in parentsWithTrait:
-            for base in parent.genes[trait].bases:
-                bases[base] = True
-        basesList = list(bases.keys())
-        shuffle(basesList)
-
-        for i in range(0, min(baseCount, len(basesList))):
-            basesReturn.append(basesList[i])
-        return basesReturn
-
-    @staticmethod
-    def GenerateGenesFromParents(DNA, parents):
-        genes = {}
-        traits = Lifeform.GenerateTraitsFromParents(parents)
+                traitsDict[trait] = True
+        traits = list(traitsDict.keys())
         for trait in traits:
-            bases = Lifeform.GenerateBasesForTraitFromParents(trait, parents)
-            genes[trait] = Gene(DNA, bases)
-        return genes
-            
+            DNA = Lifeform.GenerateDNAFromParents(trait, parents)
+            valueRange = [Lifeform.TRAITS[trait]["min"],Lifeform.TRAITS[trait]["max"]]
+            genes[trait] = Gene(trait, DNA, valueRange)
+        return genes           
 
     @staticmethod
-    def GenerateGenes(DNA, parents):
+    def GenerateGenes(parents):
         if parents is not None and len(parents) > 0:
-            return Lifeform.GenerateGenesFromParents(DNA, parents)
+            return Lifeform.GenerateGenesFromParents(parents)
         else:
-            return Lifeform.GenerateGenesRandom(DNA)
+            return Lifeform.GenerateGenesRandom()
+
+    @staticmethod
+    def MutateGenes(genes):
+        for trait in genes:
+            genes[trait].Mutate()
+        return genes
+
+    def PrintGenes(self):
+        for trait in self.genes:
+            print("[{0}] = {1}".format(trait, self.genes[trait].DNAString()))
+        
 
     def __init__(self, parents):
-        self.DNA = Lifeform.GenerateDNA(parents)
-        self.genes = Lifeform.GenerateGenes(self.DNA, parents)
+        self.genes = Lifeform.MutateGenes(Lifeform.GenerateGenes(parents))
