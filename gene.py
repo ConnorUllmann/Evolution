@@ -8,7 +8,7 @@ class Gene:
             s = "{0} {1}".format(s, base)
         return s[1:]
 
-    def Mutate(self, mutationChancePerBase = 0.1):
+    def Mutate(self, mutationChancePerBase = 0.2):
         for i in range(0, len(self.DNA)):
             if random() < mutationChancePerBase:
                 self.DNA[i] = randint(self.valueRange[0], self.valueRange[1])

@@ -5,6 +5,8 @@ from utils import *
 
 class Part:
 
+    SEPARATION_MULT = 1.2
+
     ID = 0
 
     def GenerateID(self):
@@ -13,18 +15,22 @@ class Part:
 
     @staticmethod
     def NewPartFromIndex(index, *args):
-        if index == 0:
+        i = index % 7
+        if i == 0:
             return Muscle(*args)
-        if index == 1:
+        if i == 1:
             return Bone(*args)
-        if index == 2:
+        if i == 2:
             return Heart(*args)
-        if index == 3:
+        if i == 3:
             return Gills(*args)
-        if index == 4:
+        if i == 4:
             return Propellor(*args)
-        if index == 5:
+        if i == 5:
             return Pulser(*args)
+        if i == 6:
+            return None
+        
 
     def __str__(self):
      return "part-{}".format(self.id)
@@ -66,19 +72,31 @@ class Part:
         for part in Part.parts:
             if part in self.body.parts:
                 continue
-            if LengthSq(part.x() - self.x(), part.y() - self.y()) <= (part.radius + self.radius)**2:
+            if LengthSq((part.x() - self.x(), part.y() - self.y())) <= (part.radius + self.radius)**2:
                 partsCollided.append(part)
         return partsCollided
 
+    def Neighbors(self):
+        collidedParts = []
+        for part in self.body.parts:
+            if part is self:
+                continue
+
+            if LengthSq((part.x() - self.x(), part.y() - self.y())) <= (part.radius + Part.SEPARATION_MULT * self.body.radius)**2:
+                collidedParts.append(part)
+        return collidedParts
+                
     def Setup(self):
-        pass #print("Setup " + str(self))
+        #if len(self.Neighbors() <= 0):
+        #   self.body.Destroy()
+        pass
 
     def Update(self):
         self.body.SubtractLife(self.cost)
-        collidedPart = self.Collide()
-        if collidedPart is not None:
-            self.body.SubtractLife(collidedPart.body.speed2())
-            collidedPart.body.SubtractLife(self.body.speed2()) 
+##        collidedParts = self.CollideAll()
+##        for part in collidedParts:
+##            self.body.SubtractLife(part.body.speed2() * part.body.mass)
+##            part.body.SubtractLife(self.body.speed2() * self.body.mass)
 
     def angle(self):
         return self.body.GetAngle() - self.angleOffset + self.angleBodyToPart
@@ -111,16 +129,19 @@ class Bone(Part):
 
 class Heart(Part):
     def __init__(self, position, body, radius, partProperty):
-        super().__init__(position, body, radius, 1000)
+        super().__init__(position, body, radius, 250)
         self.color = (255, 0, 255)
         #print("Heart: [{}]".format(partProperty))
 
     def Update(self):
         super().Update()
         
-        collidedPart = self.Collide()
-        if collidedPart is not None:
-            self.body.Mate(collidedPart.body)
+        collidedParts = self.CollideAll()
+        for part in collidedParts:
+            self.body.Mate(part.body)
+            self.body.Mate(part.body)
+
+
 
         
 class Gills(Part):
@@ -132,8 +153,10 @@ class Gills(Part):
     def Update(self):
         super().Update()
         #print("Forever: {}".format(100 * self.body.speed2()))
-        self.body.AddLife(500 * self.body.speed2())
+        self.body.AddLife(1000 * self.body.speed2())
 
+    def Render(self):
+        super().Render()
         
 class Propellor(Part):
     ANGLES = 8
@@ -157,7 +180,7 @@ class Propellor(Part):
         offset = (distance * cos(angle), distance * sin(angle))
         color = (128, 255, 255)
         Screen.DrawCircle((self.x() + offset[0], self.y() + offset[1]), self.radius / 2, color)
-        force = 0.001
+        force = 0.002
         angle = self.anglePropellor()
         Screen.DrawLine((self.x(), self.y()), (self.x() + offset[0], self.y() + offset[1]), color)
         self.body.AddImpulse((self.body.centerOfMass[0], self.body.centerOfMass[1]), (self.x(), self.y()), (-force * cos(angle), -force * sin(angle)))

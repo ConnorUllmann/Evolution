@@ -4,10 +4,10 @@ from gene import Gene
 class Lifeform:
 
     TRAITS = {
-        "structure":{"start_length":9, "min_length":2, "min":0, "max":5},
+        "structure":{"start_length":9, "min_length":2, "min":0, "max":8},
         "speed":{"start_length":3, "min_length":1, "min":0, "max":1},
-        "life":{"start_length":4, "min_length":1, "min":3000, "max":50000},
-        "maturation_period":{"start_length":1, "min_length":1, "min":2, "max":4}
+        "life":{"start_length":4, "min_length":1, "min":9000, "max":50000},
+        "maturation_period":{"start_length":1, "min_length":1, "min":2, "max":5}
     }
 
     @staticmethod
@@ -31,10 +31,10 @@ class Lifeform:
             DNA.append(bit)
 
         v = random()
-        if v <= 0.1:
+        if v <= 0.25:
             if len(DNA) > Lifeform.TRAITS[trait]["min_length"]:
                 DNA.pop()
-        elif v >= 1 - 0.1:
+        elif v >= 1 - 0.25:
             DNA.append(randint(Lifeform.TRAITS[trait]["min"], Lifeform.TRAITS[trait]["max"]))
         
         return DNA

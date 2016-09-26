@@ -20,9 +20,11 @@ class Screen:
         self.screen.fill(self.clearColor)
 
     def _RemoveUpdateFunctionsByKey(self, key):
+        self.updateOrder.remove(key)
         return self.updateFunctions.pop(key, None)
 
     def _RemoveRenderFunctionsByKey(self, key):
+        self.renderOrder.remove(key)
         return self.renderFunctions.pop(key, None)
         
     def RemoveUpdateFunctions(self, key):
@@ -35,12 +37,14 @@ class Screen:
         key = info[0]
         if key not in self.updateFunctions:
             self.updateFunctions[key] = []
+        self.updateOrder.append(key)
         self.updateFunctions[key].append(info[1])
         
     def _AddRenderFunction(self, info):
         key = info[0]
         if key not in self.renderFunctions:
             self.renderFunctions[key] = []
+        self.renderOrder.append(key)
         self.renderFunctions[key].append(info[1])
 
     def AddUpdateFunction(self, key, function):
@@ -48,6 +52,17 @@ class Screen:
     
     def AddRenderFunction(self, key, function):
         self.renderFunctionsAddQueue.append([str(key), function])
+
+    #Cannot be called during a render function! Only use during updates
+    @staticmethod
+    def PutOnTop(key):
+        tempKey = str(key)
+        if tempKey not in Screen.Instance.renderOrder:
+            return False
+        x = Screen.Instance.renderOrder.index(tempKey)
+        element = Screen.Instance.renderOrder.pop(x)
+        Screen.Instance.renderOrder = Screen.Instance.renderOrder + [element]
+        return True
 
     def __init__(self, width, height, clearColor=(0,0,0)):
         Screen.Instance = self
@@ -59,6 +74,8 @@ class Screen:
         self.renderFunctionsRemoveQueue = []
         self.updateFunctions = {}
         self.renderFunctions = {}
+        self.updateOrder = []
+        self.renderOrder = []
         
         self.objectAddQueue = []
         self.objectRemoveQueue = []
@@ -80,7 +97,7 @@ class Screen:
             self._AddUpdateFunction(self.updateFunctionsAddQueue.pop())
         while len(self.updateFunctionsRemoveQueue) > 0:
             self._RemoveUpdateFunctionsByKey(self.updateFunctionsRemoveQueue.pop())
-        for key in self.updateFunctions:
+        for key in self.updateOrder:
             #print("key: " + key)
             for updateFunction in self.updateFunctions[key]:
                 updateFunction()
@@ -91,7 +108,7 @@ class Screen:
         while len(self.renderFunctionsRemoveQueue) > 0:
             self._RemoveRenderFunctionsByKey(self.renderFunctionsRemoveQueue.pop())
         self.ClearScreen()
-        for key in self.renderFunctions:
+        for key in self.renderOrder:
             #print("key: " + key)
             for renderFunction in self.renderFunctions[key]:
                 renderFunction()

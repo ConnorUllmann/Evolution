@@ -8,7 +8,7 @@ from utils import *
 from time import time
 
 class Body(Lifeform):
-    ANGULAR_FRICTION = 0.9
+    ANGULAR_FRICTION = 0.8
     FRICTION = 0.99
 
     ID = 0
@@ -35,13 +35,15 @@ class Body(Lifeform):
         for i in range(0, partCount):
             spiralPosition = Spiral(i)
             partIndex = self.PartIndexFromDNA(i)
-            _position = (self.x + 2 * self.radius * spiralPosition[0], self.y + 2 * self.radius * spiralPosition[1])
+            _position = (self.x + Part.SEPARATION_MULT * self.radius * spiralPosition[0], self.y + Part.SEPARATION_MULT * self.radius * spiralPosition[1])
             _body = self
             _radius = self.radius
             _property = self.PartPropertyFromDNA(i)
             part = Part.NewPartFromIndex(partIndex, _position, _body, _radius, _property)
             parts.append(part)
         for part in parts:
+            if part is None:
+                continue
             part.Setup()
         return parts
 
@@ -84,10 +86,14 @@ class Body(Lifeform):
         self.timeStart = time()
         self.bannedMates = []
         self.parts = self.GenerateParts()
+        self.partsCount = self.PartsCount() #The number of actual parts (not including empty slots)
+        self.destroyed = False
         self.lifeStart = self.life = self.StartingLifeFromDNA()
 
         mass = 0
         for part in self.parts:
+            if part is None:
+                continue
             mass += part.mass
         self.mass = mass
         
@@ -96,8 +102,22 @@ class Body(Lifeform):
         Screen.Instance.AddUpdateFunction(self, self.Update)
         Screen.Instance.AddRenderFunction(self, self.Render)
 
+        Screen.PutOnTop(self)
+        if self.partsCount <= 0:
+            self.Destroy()
+
+    def PartsCount(self):
+        count = 0
+        for part in self.parts:
+            if part is None:
+                continue
+            count+=1
+        return count
+
     def HasHeart(self):
         for part in self.parts:
+            if part is None:
+                continue
             if type(part).__name__ == "Heart":
                 return True
         return False
@@ -108,10 +128,14 @@ class Body(Lifeform):
         return sqrt(self.speed2())
 
     def Destroy(self):
-        for part in self.parts:
-            part.Destroy()
-        Screen.Instance.RemoveUpdateFunctions(self)
-        Screen.Instance.RemoveRenderFunctions(self)
+        if not self.destroyed:
+            for part in self.parts:
+                if part is None:
+                    continue
+                part.Destroy()
+            Screen.Instance.RemoveUpdateFunctions(self)
+            Screen.Instance.RemoveRenderFunctions(self)
+            self.destroyed = True
 
     def AddImpulse(self, *args):
         torque = Torque(*args)
@@ -143,9 +167,13 @@ class Body(Lifeform):
             return None
         if other in self.bannedMates:
             return None
+        other.bannedMates.append(self)
         self.bannedMates.append(other)
         child = Body(((self.x + other.x) / 2, (self.y + other.y) / 2), [self, other])
+        other.bannedMates.append(child)
         self.bannedMates.append(child)
+        child.bannedMates.append(self)
+        child.bannedMates.append(other)
         return child
 
     def SubtractLife(self, amount):
@@ -160,7 +188,13 @@ class Body(Lifeform):
 
     def Bounds(self):
         if len(self.parts) > 0:
-            lastPart = self.parts[len(self.parts)-1]
+            lastPart = None
+            n = 1
+            while lastPart is None:
+                lastPart = self.parts[len(self.parts)-n]
+                n += 1
+                if n > len(self.parts):
+                    return
             buffer = hypot(lastPart.x() - self.x, lastPart.y() - self.y)
             if self.x < -buffer:
                 self.x = Screen.Width() + buffer #-buffer
@@ -180,10 +214,14 @@ class Body(Lifeform):
         if not self.HasHeart():
             self.SubtractLife(10000)
 
+        if time() - self.timeStart > 150:
+            self.Destroy()
+
     def Render(self):
-        self.color = (0, min(max(255 * self.life / self.lifeStart, 0), 255), 0)
-        Screen.DrawCircle((self.x, self.y), int(self.radius*0.8), self.color)
-        Screen.Instance.DrawLine((self.x, self.y), (self.x + 15 * cos(self.angle), self.y + 15 * sin(self.angle)), (255, 0, 0))
+        pass
+        #self.color = (0, min(max(255 * self.life / self.lifeStart, 0), 255), 0)
+        #Screen.DrawCircle((self.x, self.y), int(self.radius*0.8), self.color)
+        #Screen.Instance.DrawLine((self.x, self.y), (self.x + 15 * cos(self.angle), self.y + 15 * sin(self.angle)), (255, 0, 0))
 
 def CreateStructuredBody(position, genes):
     geneList = []
@@ -196,7 +234,7 @@ def CreateStructuredBody(position, genes):
 
 def PreGame():
 ##    body = CreateStructuredBody((400, 200), {
-##        "structure":[[0, 0, 4, 2, 2, 2, 3, 3, 4, 6, 5, 5], [0, 5]],
+##        "structure":[[0, 0, 4, 2, 2, 2, 3, 3, 4, 6, 5, 5], [0, 8]],
 ##        "speed":[[1], [0, 1]],
 ##        "life":[[100000], [1, 100000]],
 ##        "maturation_period":[[2], [1, 50]]
@@ -208,7 +246,7 @@ def PreGame():
 ##        "maturation_period":[[2], [1, 50]]
 ##        })
  #   body.PrintGenes()
-    for i in range(0, 40):
+    for i in range(0, 60):
         body = Body((randint(0, Screen.Width()), randint(0, Screen.Height())), [])
 
 def UpdateGame():
