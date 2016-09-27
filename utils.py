@@ -28,6 +28,10 @@ def Spiral(n):
     else:
         return (k, -m + n + k + t)
 
+def Heartbeat(x):
+    x = x % 1
+    return 17.0351656925 * x * (1 / (x + 1) - 0.5 * x)**4 * sin(4 * pi * x)
+
 def Dot(a, b):
     total = 0
     for i in range(0, len(a)):

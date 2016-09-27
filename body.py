@@ -44,11 +44,12 @@ class Body(Lifeform):
             part = Part.NewPartFromIndex(partIndex, _position, _body, _radius, _property)
             parts.append(part)
         part0 = Part.FirstRealPart(parts, False)
-        part0.highlight = True
+        if part0 is not None:
+            part0.highlight = True
         for part in parts:
             if part is None:
                 continue
-            part.Setup()
+            part.Setup(parts)
         return parts
 
     def StartingLifeFromDNA(self):

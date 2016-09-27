@@ -11,9 +11,11 @@ class Gene:
     def Mutate(self, mutationChancePerBase = 0.2):
         for i in range(0, len(self.DNA)):
             if random() < mutationChancePerBase:
-                self.DNA[i] = randint(self.valueRange[0], self.valueRange[1])
+                self.DNA[i] = randint(self.min, self.max)
 
     def __init__(self, trait, DNA, valueRange):
         self.trait = trait
         self.DNA = DNA
         self.valueRange = valueRange
+        self.min = self.valueRange[0]
+        self.max = self.valueRange[1]

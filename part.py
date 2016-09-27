@@ -2,7 +2,7 @@ from screen import Screen
 from math import *
 from time import time
 from utils import *
-from random import shuffle
+from random import shuffle, randint, random
 
 class Part:
 
@@ -104,7 +104,7 @@ class Part:
                 collidedParts.append(part)
         return collidedParts
                 
-    def Setup(self):
+    def Setup(self, body):
         #if len(self.Neighbors() <= 0):
         #   self.body.Destroy()
         pass
@@ -154,13 +154,32 @@ class Bone(Part):
 
 
 class Heart(Part):
+    
     def __init__(self, position, body, radius, partProperty):
         super().__init__(position, body, radius, 250, 20)
         self.color = (255, 0, 255)
+        self.radiusStart = self.radius
+        self.phase = random()
         #print("Heart: [{}]".format(partProperty))
 
+    def Setup(self, parts):
+        hearts = [self]
+        phaseSum = self.phase
+        for part in parts:
+            if part is None or part == self or type(part) is not Heart:
+                continue
+            hearts.append(part)
+            phaseSum += part.phase
+        phaseAverage = phaseSum / len(hearts)
+        for heart in hearts:
+            heart.phase = phaseAverage
+
+    def HeartbeatRadius(self):
+        return self.radiusStart * (1 + 0.4*Heartbeat(time()/2 * (1+self.phase)))
+            
     def Update(self):
         super().Update()
+        self.radius = self.HeartbeatRadius()
 
     def Collide(self, parts):
         super().Collide(parts)
