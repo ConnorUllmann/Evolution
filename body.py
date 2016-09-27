@@ -8,10 +8,12 @@ from utils import *
 from time import time
 
 class Body(Lifeform):
+    
     ANGULAR_FRICTION = 0.8
     FRICTION = 0.99
 
     ID = 0
+    bodies = []
 
     def SetAngle(self, value):
         self.angle = value % (2 * pi)
@@ -41,6 +43,8 @@ class Body(Lifeform):
             _property = self.PartPropertyFromDNA(i)
             part = Part.NewPartFromIndex(partIndex, _position, _body, _radius, _property)
             parts.append(part)
+        part0 = Part.FirstRealPart(parts, False)
+        part0.highlight = True
         for part in parts:
             if part is None:
                 continue
@@ -68,6 +72,7 @@ class Body(Lifeform):
 
     def __init__(self, position, parents, genes=None):
         self.GenerateID()
+        Body.bodies.append(self)
         super().__init__(parents)
 
         if genes is not None:
@@ -82,6 +87,7 @@ class Body(Lifeform):
         self.momentum = [0,0]
         self.radius = 10
         self.color = (255, 255, 255)
+        self.visible = True
         self.maturationPeriod = self.MaturationPeriodFromDNA()
         self.timeStart = time()
         self.bannedMates = []
@@ -96,6 +102,17 @@ class Body(Lifeform):
                 continue
             mass += part.mass
         self.mass = mass
+
+        maxDistanceSq = -1
+        maxDistancePart = None
+        for part in self.parts:
+            if part is None:
+                continue
+            distanceSq = DistanceSq((self.x, self.y), (part.x(), part.y()))
+            if distanceSq > maxDistanceSq:
+                maxDistanceSq = distanceSq
+                maxDistancePart = part
+        self.radius = sqrt(maxDistanceSq) + maxDistancePart.radius
         
         self.SetAngle(random() * 2 * pi)
         
@@ -129,13 +146,19 @@ class Body(Lifeform):
 
     def Destroy(self):
         if not self.destroyed:
+            self.destroyed = True
             for part in self.parts:
                 if part is None:
                     continue
                 part.Destroy()
             Screen.Instance.RemoveUpdateFunctions(self)
             Screen.Instance.RemoveRenderFunctions(self)
-            self.destroyed = True
+            Body.bodies.remove(self)
+
+    #Do not call explicitly--this is used by parts' destroy function when they are removed
+    def RemovePart(self, part):
+        i = self.parts.index(part)
+        self.parts[i] = None
 
     def AddImpulse(self, *args):
         torque = Torque(*args)
@@ -167,6 +190,12 @@ class Body(Lifeform):
             return None
         if other in self.bannedMates:
             return None
+        _parts = list(self.parts)
+        _parts.extend(other.parts)
+        for part in _parts:
+            if part is None:
+                continue
+            part.SubtractMass((part.massStart+part.armor)/4)
         other.bannedMates.append(self)
         self.bannedMates.append(other)
         child = Body(((self.x + other.x) / 2, (self.y + other.y) / 2), [self, other])
@@ -175,6 +204,31 @@ class Body(Lifeform):
         child.bannedMates.append(self)
         child.bannedMates.append(other)
         return child
+
+    def Collides(self, body):
+        return CirclesCollide((self.x, self.y), self.radius, (body.x, body.y), body.radius)
+
+    @staticmethod
+    def AllCollidingBodies(body):
+        collidingBodies = []
+        for _body in Body.bodies:
+            if _body == body:
+                continue
+            if body.Collides(_body):
+                collidingBodies.append(_body)
+        return collidingBodies
+
+    @staticmethod
+    def AllCollidingParts(part):
+        collidingParts = []
+        bodies = Body.AllCollidingBodies(part.body)
+        for body in bodies:
+            for _part in body.parts:
+                if _part is None:
+                    continue
+                if part.Collides(_part):
+                    collidingParts.append(_part)
+        return collidingParts
 
     def SubtractLife(self, amount):
         self.life -= amount
@@ -208,6 +262,13 @@ class Body(Lifeform):
             #    self.Destroy()
 
     def Update(self):
+        for part in self.parts:
+            if part is None:
+                continue
+            part.Collide(Body.AllCollidingParts(part))
+            part.Update()
+
+        
         self.Physics()
         self.Bounds()
 
@@ -218,9 +279,15 @@ class Body(Lifeform):
             self.Destroy()
 
     def Render(self):
-        pass
-        #self.color = (0, min(max(255 * self.life / self.lifeStart, 0), 255), 0)
-        #Screen.DrawCircle((self.x, self.y), int(self.radius*0.8), self.color)
+        if not self.visible:
+            return
+        
+        for part in self.parts:
+            if part is None:
+                continue
+            part.Render()
+        #self.color = (0, min(max(255 * self.life / self.lifeStart, 0), 255), 0, 128)
+        #Screen.DrawCircle((self.x, self.y), int(self.radius), self.color)
         #Screen.Instance.DrawLine((self.x, self.y), (self.x + 15 * cos(self.angle), self.y + 15 * sin(self.angle)), (255, 0, 0))
 
 def CreateStructuredBody(position, genes):
@@ -232,21 +299,28 @@ def CreateStructuredBody(position, genes):
         _genes[gene.trait] = gene
     return Body(position, [], _genes)
 
+def Setup():
+    body = CreateStructuredBody((400, 200), {
+        "structure":[[0, 0, 4, 2, 2, 2, 3, 3, 4, 6, 5, 5], [0, 8]],
+        "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
+        "maturation_period":[[5], [1, 50]]
+        })
+    body = CreateStructuredBody((200, 200), {
+        "structure":[[0, 0, 4, 6, 2, 2, 3, 3, 4, 2, 5, 5], [0, 5]],
+        "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
+        "maturation_period":[[5], [1, 50]]
+        })
+    body = CreateStructuredBody((250, 250), {
+        "structure":[[0, 0, 4, 6, 2, 2, 3, 3, 4, 2, 5, 5], [0, 5]],
+        "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
+        "maturation_period":[[5], [1, 50]]
+        })
+    body.SetAngle(-pi/2)
+    
+
 def PreGame():
-##    body = CreateStructuredBody((400, 200), {
-##        "structure":[[0, 0, 4, 2, 2, 2, 3, 3, 4, 6, 5, 5], [0, 8]],
-##        "speed":[[1], [0, 1]],
-##        "life":[[100000], [1, 100000]],
-##        "maturation_period":[[2], [1, 50]]
-##        })
-##    body = CreateStructuredBody((200, 200), {
-##        "structure":[[0, 0, 4, 6, 2, 2, 3, 3, 4, 2, 5, 5], [0, 5]],
-##        "speed":[[1], [0, 1]],
-##        "life":[[100000], [1, 100000]],
-##        "maturation_period":[[2], [1, 50]]
-##        })
- #   body.PrintGenes()
-    for i in range(0, 60):
+    #Setup()
+    for i in range(0, 120):
         body = Body((randint(0, Screen.Width()), randint(0, Screen.Height())), [])
 
 def UpdateGame():

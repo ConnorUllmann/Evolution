@@ -5,8 +5,7 @@ class Lifeform:
 
     TRAITS = {
         "structure":{"start_length":9, "min_length":2, "min":0, "max":8},
-        "speed":{"start_length":3, "min_length":1, "min":0, "max":1},
-        "life":{"start_length":4, "min_length":1, "min":9000, "max":50000},
+        "life":{"start_length":6, "min_length":1, "min":9000, "max":100000},
         "maturation_period":{"start_length":1, "min_length":1, "min":2, "max":5}
     }
 

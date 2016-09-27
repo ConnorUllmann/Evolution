@@ -67,6 +67,14 @@ def Cross3(a, b):
          a[2]*b[0] - a[0]*b[2],
          a[0]*b[1] - a[1]*b[0]]
 
+def DistanceSq(a, b):
+    return LengthSq(((a[0] - b[0]), (a[1] - b[1])))
+def Distance(a, b):
+    return Length(((a[0] - b[0]), (a[1] - b[1])))
+
+def CirclesCollide(a_pos, a_radius, b_pos, b_radius):
+    return DistanceSq(a_pos, b_pos) <= (a_radius + b_radius)**2
+
 def Torque(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])
     return Cross2(r, forceVector)

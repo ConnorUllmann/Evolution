@@ -2,6 +2,7 @@ from screen import Screen
 from math import *
 from time import time
 from utils import *
+from random import shuffle
 
 class Part:
 
@@ -37,7 +38,7 @@ class Part:
 
     parts = []
 
-    def __init__(self, position, body, radius, cost):
+    def __init__(self, position, body, radius, cost, mass):
         self.GenerateID()
         Part.parts.append(self)
         self.body = body
@@ -45,43 +46,60 @@ class Part:
         self.angleOffset = self.body.GetAngle()
         self.distance = hypot(position[0] - self.body.x, position[1] - self.body.y)
         self.radius = radius
+        self.power = 0.05
+        self.armor = 0.01
+        self.rateRepair = 0.2
         self.color = (80, 80, 80)
         self.cost = cost
-        self.mass = 1
+        self.massStart = self.mass = mass
         self.destroyed = False
-        Screen.Instance.AddUpdateFunction(self, self.Update)
-        Screen.Instance.AddRenderFunction(self, self.Render)
+        self.highlight = False
+        #Screen.Instance.AddUpdateFunction(self, self.Update)
+        #Screen.Instance.AddRenderFunction(self, self.Render)
 
     def Destroy(self):
         if not self.destroyed:
             self.destroyed = True
             Part.parts.remove(self)
-            Screen.Instance.RemoveUpdateFunctions(self)
-            Screen.Instance.RemoveRenderFunctions(self)
+            self.body.RemovePart(self)
+            #Screen.Instance.RemoveUpdateFunctions(self)
+            #Screen.Instance.RemoveRenderFunctions(self)
 
-    def Collide(self):
-        for part in Part.parts:
-            if part in self.body.parts:
-                continue
-            if LengthSq((part.x() - self.x(), part.y() - self.y())) <= (part.radius + self.radius)**2:
-                return part
-        return None
+    def Collides(self, part):
+        return CirclesCollide((self.x(), self.y()), self.radius, (part.x(), part.y()), part.radius)
 
-    def CollideAll(self):
-        partsCollided = []
-        for part in Part.parts:
-            if part in self.body.parts:
-                continue
-            if LengthSq((part.x() - self.x(), part.y() - self.y())) <= (part.radius + self.radius)**2:
-                partsCollided.append(part)
-        return partsCollided
+    #Called every frame from the parent body part.
+    #"parts" is a list of all parts this body collides with on other bodies
+    def Collide(self, parts):
+        for part in parts:
+            part.SubtractMass(self.power * (self.body.speed2()+1)/10)
+
+    def SubtractMass(self, amount):
+        self.mass -= max(amount - self.armor, 0)
+        if self.mass <= 0:
+            self.mass = 0
+            self.Destroy() 
+        
+    #Gets a random part that is not null from the list of parts
+    @staticmethod
+    def FirstRealPart(parts, random=False):
+        if random:
+            shuffle(parts)
+        i = 0
+        part = None
+        while part is None:
+            if i < len(parts):
+                part = parts[i]
+            else:
+                return None
+            i+=1
+        return part
 
     def Neighbors(self):
         collidedParts = []
         for part in self.body.parts:
-            if part is self:
+            if part is self or part is None:
                 continue
-
             if LengthSq((part.x() - self.x(), part.y() - self.y())) <= (part.radius + Part.SEPARATION_MULT * self.body.radius)**2:
                 collidedParts.append(part)
         return collidedParts
@@ -93,6 +111,11 @@ class Part:
 
     def Update(self):
         self.body.SubtractLife(self.cost)
+        if self.mass < self.massStart:
+            if self.mass + self.rateRepair >= self.massStart:
+                self.mass = self.massStart
+            else:
+                self.mass = min(self.mass + self.rateRepair, self.massStart)
 ##        collidedParts = self.CollideAll()
 ##        for part in collidedParts:
 ##            self.body.SubtractLife(part.body.speed2() * part.body.mass)
@@ -108,12 +131,15 @@ class Part:
         return self.body.y + self.distance * sin(self.angle())
 
     def Render(self):
-        Screen.Instance.DrawCircle((self.x(), self.y()), self.radius, self.color)
+        if self.highlight:
+            Screen.Instance.DrawCircle((self.x(), self.y()), 1.2 * self.radius * 0.25 * (3 + min(max(self.mass/self.massStart, 0), 1)), (255, 255, 255))
+        Screen.Instance.DrawCircle((self.x(), self.y()), self.radius * 0.25 * (3 + min(max(self.mass/self.massStart, 0), 1)), self.color)
 
 class Muscle(Part):
     def __init__(self, position, body, radius, partProperty):
-        super().__init__(position, body, radius, 10)
+        super().__init__(position, body, radius, 10, 20)
         self.color = (255, 0, 0)
+        self.power = 2
         #print("Muscle: [{}]".format(partProperty))
 
     def Update(self):
@@ -122,31 +148,34 @@ class Muscle(Part):
     
 class Bone(Part):
     def __init__(self, position, body, radius, partProperty):
-        super().__init__(position, body, radius, 25)
-        self.color = (255, 255, 255)
+        super().__init__(position, body, radius, 25, 100)
+        self.color = (255, 250, 230)
         #print("Bone: [{}]".format(partProperty))
 
 
 class Heart(Part):
     def __init__(self, position, body, radius, partProperty):
-        super().__init__(position, body, radius, 250)
+        super().__init__(position, body, radius, 250, 20)
         self.color = (255, 0, 255)
         #print("Heart: [{}]".format(partProperty))
 
     def Update(self):
         super().Update()
+
+    def Collide(self, parts):
+        super().Collide(parts)
         
-        collidedParts = self.CollideAll()
-        for part in collidedParts:
-            self.body.Mate(part.body)
-            self.body.Mate(part.body)
+        if len(parts) <= 0:
+            return
 
-
+        for i in range(0, 2):
+            part = Part.FirstRealPart(parts, True)
+            self.body.Mate(part.body)
 
         
 class Gills(Part):
     def __init__(self, position, body, radius, partProperty):
-        super().__init__(position, body, radius, 50)
+        super().__init__(position, body, radius, 50, 30)
         self.color = (0, 255, 255)
         #print("Gills: [{}]".format(partProperty))
 
@@ -162,12 +191,15 @@ class Propellor(Part):
     ANGLES = 8
     
     def __init__(self, position, body, radius, partProperty):
-        super().__init__(position, body, radius, 100)
+        super().__init__(position, body, radius, 100, 50)
         self.color = (0, 0, 255)
         self.partProperty = partProperty % Propellor.ANGLES
 
     def Update(self):
         super().Update()
+        force = 0.03
+        angle = self.anglePropellor()
+        self.body.AddImpulse((self.body.centerOfMass[0], self.body.centerOfMass[1]), (self.x(), self.y()), (-force * cos(angle), -force * sin(angle)))
         #print("Propellor: [{}]".format(partProperty))
 
     def anglePropellor(self):
@@ -180,15 +212,12 @@ class Propellor(Part):
         offset = (distance * cos(angle), distance * sin(angle))
         color = (128, 255, 255)
         Screen.DrawCircle((self.x() + offset[0], self.y() + offset[1]), self.radius / 2, color)
-        force = 0.002
-        angle = self.anglePropellor()
         Screen.DrawLine((self.x(), self.y()), (self.x() + offset[0], self.y() + offset[1]), color)
-        self.body.AddImpulse((self.body.centerOfMass[0], self.body.centerOfMass[1]), (self.x(), self.y()), (-force * cos(angle), -force * sin(angle)))
         
 
         
 class Pulser(Part):
     def __init__(self, position, body, radius, partProperty):
-        super().__init__(position, body, radius, 500)
+        super().__init__(position, body, radius, 500, 100)
         self.color = (255, 255, 0)
         #print("Pulser: [{}]".format(partProperty))
