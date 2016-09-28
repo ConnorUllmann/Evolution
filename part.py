@@ -73,7 +73,7 @@ class Part:
     #"parts" is a list of all parts this body collides with on other bodies
     def Collide(self, parts):
         for part in parts:
-            part.SubtractMass(self.power * (self.body.speed2()+1)/10)
+            part.SubtractMass(self.power * (self.body.speed2()+1)/30)
 
     def SubtractMass(self, amount):
         self.mass -= max(amount - self.armor, 0)
