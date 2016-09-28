@@ -4,9 +4,11 @@ from gene import Gene
 class Lifeform:
 
     TRAITS = {
-        "structure":{"start_length":9, "min_length":2, "min":0, "max":8},
-        "life":{"start_length":6, "min_length":1, "min":9000, "max":100000},
-        "maturation_period":{"start_length":1, "min_length":1, "min":2, "max":5}
+        "structure":{"format":"int", "start_length":17, "min_length":2, "min":0, "max":8},
+        "life":{"format":"int", "start_length":6, "min_length":1, "min":9000, "max":100000},
+        "maturation_period":{"format":"int", "start_length":1, "min_length":1, "min":2, "max":5},
+        "refractory_period":{"format":"int", "start_length":1, "min_length":1, "min":1, "max":4},
+        "species_threshold":{"format":"float", "start_length":0, "min_length":0, "min":0, "max":0.95}
     }
 
     @staticmethod
@@ -14,7 +16,10 @@ class Lifeform:
         DNA = []
         info = Lifeform.TRAITS[trait]
         for i in range(0, info["start_length"]):
-            DNA.append(randint(info["min"], info["max"]))
+            if info["format"] == "int":
+                DNA.append(randint(info["min"], info["max"]))
+            if info["format"] == "float":
+                DNA.append(random() * (info["max"] - info["min"]) + info["min"])
         return DNA
 
     @staticmethod
@@ -34,8 +39,10 @@ class Lifeform:
             if len(DNA) > Lifeform.TRAITS[trait]["min_length"]:
                 DNA.pop()
         elif v >= 1 - 0.25:
-            DNA.append(randint(Lifeform.TRAITS[trait]["min"], Lifeform.TRAITS[trait]["max"]))
-        
+            if Lifeform.TRAITS[trait]["format"] == "int":
+                DNA.append(randint(Lifeform.TRAITS[trait]["min"], Lifeform.TRAITS[trait]["max"]))
+            elif Lifeform.TRAITS[trait]["format"] == "float":
+                DNA.append(random() * (Lifeform.TRAITS[trait]["max"] - Lifeform.TRAITS[trait]["min"]) + Lifeform.TRAITS[trait]["min"])
         return DNA
 
     @staticmethod
@@ -73,6 +80,29 @@ class Lifeform:
         for trait in genes:
             genes[trait].Mutate()
         return genes
+
+    @staticmethod
+    def CompareGenomes(a_genes, b_genes):
+        same = 0
+        diff = 0
+        for trait in a_genes:
+            if trait in b_genes:
+                aLenDNA = len(a_genes[trait].DNA)
+                bLenDNA = len(b_genes[trait].DNA)
+                maxLen = max(aLenDNA, bLenDNA)
+                minLen = min(aLenDNA, bLenDNA)
+                diff += maxLen - minLen
+                for i in range(0, minLen):
+                    if a_genes[trait].DNA[i] == b_genes[trait].DNA[i]:
+                        same += 1
+                    else:
+                        diff += 1
+            else:
+                diff += len(a_genes[trait].DNA)
+        for trait in b_genes:
+            if trait not in a_genes:
+                diff += len(b_genes[trait].DNA)
+        return same / (same + diff)
 
     def PrintGenes(self):
         for trait in self.genes:

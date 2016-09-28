@@ -90,6 +90,7 @@ class Screen:
         self.screen.set_alpha(None)
         self.ClearScreen()
         pygame.init()
+        #pygame.font.init()
         pygame.display.init()
     
     def Update(self):
@@ -144,7 +145,7 @@ class Screen:
     @staticmethod
     def DrawText(position=(0,0), text="", color=(255,255,255), fontSize=12):
         intPosition = (int(position[0]), int(position[1]))
-        font = pygame.font.SysFont("monospace", fontSize)
+        font = pygame.font.Font(None, fontSize)
         textRendered = font.render(text, 1, color)
         Screen.Instance.screen.blit(textRendered, intPosition)
 

@@ -10,15 +10,55 @@ from time import time
 class Body(Lifeform):
     
     ANGULAR_FRICTION = 0.8
-    FRICTION = 0.99
+    FRICTION = 0.999
 
     ID = 0
     bodies = []
 
+    def GenerateID(self):
+        self.id = Body.ID
+        Body.ID += 1
+
+    def __str__(self):
+     return "body-{}".format(self.id)
+
     def SetAngle(self, value):
         self.angle = value % (2 * pi)
+    
     def GetAngle(self):
         return self.angle
+
+    def speed2(self):
+        return LengthSq(Scale(self.momentum, 1/self.mass))
+    
+    def speed(self):
+        return sqrt(self.speed2())
+
+# --- \\ Properties From DNA ---
+
+    def StartingLifeFromDNA(self):
+        life = 0
+        for base in self.genes["life"].DNA:
+            life += base
+        return life
+
+    def MaturationPeriodFromDNA(self):
+        maturationPeriod = 0
+        for base in self.genes["maturation_period"].DNA:
+            maturationPeriod += base
+        return maturationPeriod
+
+    def RefractoryPeriodFromDNA(self):
+        refractoryPeriod = 0
+        for base in self.genes["refractory_period"].DNA:
+            refractoryPeriod += base
+        return refractoryPeriod
+
+    def SpeciesThresholdFromDNA(self):
+        speciesThreshold = 0
+        for base in self.genes["species_threshold"].DNA:
+            speciesThreshold += base
+        return max(min(speciesThreshold, 1), 0)
 
     def PartCountFromDNA(self):
         return int(len(self.genes["structure"].DNA)/2)
@@ -30,6 +70,8 @@ class Body(Lifeform):
     def PartPropertyFromDNA(self, index):
         DNA = self.genes["structure"].DNA
         return DNA[(index*2+1)%len(DNA)]
+
+# --- // Properties From DNA ---
 
     def GenerateParts(self):
         parts = []
@@ -52,24 +94,15 @@ class Body(Lifeform):
             part.Setup(parts)
         return parts
 
-    def StartingLifeFromDNA(self):
-        life = 0
-        for base in self.genes["life"].DNA:
-            life += base
-        return life
-
-    def MaturationPeriodFromDNA(self):
-        maturationPeriod = 0
-        for base in self.genes["maturation_period"].DNA:
-            maturationPeriod += base
-        return maturationPeriod
-
-    def GenerateID(self):
-        self.id = Body.ID
-        Body.ID += 1
-
-    def __str__(self):
-     return "body-{}".format(self.id)
+    @staticmethod
+    def GenerationFromParents(parents):
+        if parents is None or len(parents) <= 0:
+            return 0
+        parentsMaxGeneration = 0
+        for parent in parents:
+            if parent.generation > parentsMaxGeneration:
+                parentsMaxGeneration = parent.generation
+        return parentsMaxGeneration+1
 
     def __init__(self, position, parents, genes=None):
         self.GenerateID()
@@ -96,6 +129,8 @@ class Body(Lifeform):
         self.partsCount = self.PartsCount() #The number of actual parts (not including empty slots)
         self.destroyed = False
         self.lifeStart = self.life = self.StartingLifeFromDNA()
+        self.generation = self.GenerationFromParents(parents)
+        self.speciesThreshold = self.SpeciesThresholdFromDNA()
 
         mass = 0
         for part in self.parts:
@@ -140,11 +175,6 @@ class Body(Lifeform):
                 return True
         return False
 
-    def speed2(self):
-        return LengthSq(Scale(self.momentum, 1/self.mass))
-    def speed(self):
-        return sqrt(self.speed2())
-
     def Destroy(self):
         if not self.destroyed:
             self.destroyed = True
@@ -184,6 +214,11 @@ class Body(Lifeform):
         
         #print(self.angularVelocity)
 
+    @staticmethod
+    def AreSameSpecies(a_body, b_body):
+        speciesComparison = Lifeform.CompareGenomes(a_body.genes, b_body.genes)
+        return speciesComparison >= a_body.speciesThreshold and speciesComparison >= b_body.speciesThreshold
+
     def Mate(self, other):
         if time() - self.timeStart <= self.maturationPeriod:
             return None
@@ -191,19 +226,21 @@ class Body(Lifeform):
             return None
         if other in self.bannedMates:
             return None
+        if not Body.AreSameSpecies(self, other):
+            return None
         _parts = list(self.parts)
         _parts.extend(other.parts)
         for part in _parts:
             if part is None:
                 continue
             part.SubtractMass((part.massStart+part.armor)/4)
-        other.bannedMates.append(self)
-        self.bannedMates.append(other)
+        #other.bannedMates.append(self)
+        #self.bannedMates.append(other)
         child = Body(((self.x + other.x) / 2, (self.y + other.y) / 2), [self, other])
-        other.bannedMates.append(child)
-        self.bannedMates.append(child)
-        child.bannedMates.append(self)
-        child.bannedMates.append(other)
+        #other.bannedMates.append(child)
+        #self.bannedMates.append(child)
+        #child.bannedMates.append(self)
+        #child.bannedMates.append(other)
         return child
 
     def Collides(self, body):
@@ -276,7 +313,7 @@ class Body(Lifeform):
         if not self.HasHeart():
             self.SubtractLife(10000)
 
-        if time() - self.timeStart > 150:
+        if time() - self.timeStart > 90:
             self.Destroy()
 
     def Render(self):
@@ -301,36 +338,66 @@ def CreateStructuredBody(position, genes):
     return Body(position, [], _genes)
 
 def Setup():
-    body = CreateStructuredBody((400, 200), {
+    body0 = CreateStructuredBody((400, 200), {
         "structure":[[0, 0, 4, 2, 2, 2, 3, 3, 4, 6, 5, 5], [0, 8]],
         "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
-        "maturation_period":[[5], [1, 50]]
+        "maturation_period":[[5], [1, 50]],
+        "refractory_period":[[6], [4, 10]],
+        "species_threshold":[[0.08], [0, 0.95]]
         })
-    body = CreateStructuredBody((200, 200), {
-        "structure":[[0, 0, 4, 6, 2, 2, 3, 3, 4, 2, 5, 5], [0, 5]],
+    body1 = CreateStructuredBody((200, 200), {
+        "structure":[[0, 0, 4, 6, 2, 2, 3, 3, 4, 2, 5, 5], [0, 8]],
         "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
-        "maturation_period":[[5], [1, 50]]
+        "maturation_period":[[5], [1, 50]],
+        "refractory_period":[[6], [4, 10]],
+        "species_threshold":[[0.08], [0, 0.95]]
         })
-    body = CreateStructuredBody((250, 250), {
-        "structure":[[0, 0, 4, 6, 2, 2, 3, 3, 4, 2, 5, 5], [0, 5]],
-        "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
-        "maturation_period":[[5], [1, 50]]
+    body2 = CreateStructuredBody((250, 250), {
+        "structure":[[9, 0, 4, 6, 2, 2, 3, 3, 7, 2, 5, 5], [0, 8]],
+        "life":[[100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
+        "maturation_period":[[5, 10], [1, 100]],
+        "refractory_period":[[6], [4, 10]],
+        "species_threshold":[[0.08], [0, 0.95]]
         })
-    body.SetAngle(-pi/2)
+    body2.SetAngle(-pi/2)
     
 
 def PreGame():
     #Setup()
-    for i in range(0, 120):
+    for i in range(0, 100):
         body = Body((randint(0, Screen.Width()), randint(0, Screen.Height())), [])
 
+maxGeneration = -1
+speciesThresholdAverage = 0
 def UpdateGame():
-    pass
+    global maxGeneration, speciesThresholdAverage
 
+    if len(Body.bodies) <= 0 and maxGeneration >= 0:
+        print("None remain.")
+        maxGeneration = -1
+
+    if len(Body.bodies) <= 3:
+        Body((random() * Screen.Width, random() * Screen.Height()), Body.bodies)
+        print("Low population - generating children")
+        maxGeneration = -1
+
+    speciesThresholdSum = 0
+    for body in Body.bodies:
+        speciesThresholdSum += body.speciesThreshold
+        if body.generation > maxGeneration:
+            maxGeneration = body.generation
+            print("Generation {}'s first member was just born.".format(maxGeneration))
+    speciesThresholdAverage = speciesThresholdSum / len(Body.bodies)
+    pygame.display.set_caption("SpeciesThresholdAverage: {}".format(int(speciesThresholdAverage*1000)/1000))
+
+def RenderGame():
+    pass
+    
 def StartGame():
     Screen(600, 400)
     PreGame()
     Screen.Instance.AddUpdateFunction("main", UpdateGame)
+    Screen.Instance.AddRenderFunction("main", RenderGame)
     Screen.Start()
 
 StartGame()

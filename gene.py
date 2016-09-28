@@ -8,10 +8,15 @@ class Gene:
             s = "{0} {1}".format(s, base)
         return s[1:]
 
-    def Mutate(self, mutationChancePerBase = 0.2):
+    def Mutate(self, mutationChancePerBase = 0.05):
         for i in range(0, len(self.DNA)):
             if random() < mutationChancePerBase:
-                self.DNA[i] = randint(self.min, self.max)
+                try:
+                    _min = int(self.min)
+                    _max = int(self.max)
+                    self.DNA[i] = randint(_min, _max)
+                except ValueError:
+                    self.DNA[i] = random() * (self.max - self.min) + self.min
 
     def __init__(self, trait, DNA, valueRange):
         self.trait = trait

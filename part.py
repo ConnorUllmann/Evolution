@@ -52,6 +52,7 @@ class Part:
         self.color = (80, 80, 80)
         self.cost = cost
         self.massStart = self.mass = mass
+        self.timeStart = time()
         self.destroyed = False
         self.highlight = False
         #Screen.Instance.AddUpdateFunction(self, self.Update)
@@ -85,15 +86,10 @@ class Part:
     def FirstRealPart(parts, random=False):
         if random:
             shuffle(parts)
-        i = 0
-        part = None
-        while part is None:
-            if i < len(parts):
-                part = parts[i]
-            else:
-                return None
-            i+=1
-        return part
+        for i in range(0, len(parts)):
+            if parts[i] is not None:
+                return parts[i]
+        return None
 
     def Neighbors(self):
         collidedParts = []
@@ -160,6 +156,8 @@ class Heart(Part):
         self.color = (255, 0, 255)
         self.radiusStart = self.radius
         self.phase = random()
+        self.lastMatingTime = time()
+        self.refractoryPeriod = self.body.RefractoryPeriodFromDNA()
         #print("Heart: [{}]".format(partProperty))
 
     def Setup(self, parts):
@@ -187,9 +185,11 @@ class Heart(Part):
         if len(parts) <= 0:
             return
 
-        for i in range(0, 2):
-            part = Part.FirstRealPart(parts, True)
-            self.body.Mate(part.body)
+        if time() - self.lastMatingTime > self.refractoryPeriod:
+            for i in range(0, 2):
+                part = Part.FirstRealPart(parts, True)
+                self.body.Mate(part.body)
+            self.lastMatingTime = time()
 
         
 class Gills(Part):
