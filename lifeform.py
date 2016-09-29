@@ -4,11 +4,11 @@ from gene import Gene
 class Lifeform:
 
     TRAITS = {
-        "structure":{"format":"int", "start_length":17, "min_length":2, "min":0, "max":8},
-        "life":{"format":"int", "start_length":6, "min_length":1, "min":9000, "max":100000},
-        "maturation_period":{"format":"int", "start_length":1, "min_length":1, "min":2, "max":5},
-        "refractory_period":{"format":"int", "start_length":1, "min_length":1, "min":1, "max":4},
-        "species_threshold":{"format":"float", "start_length":0, "min_length":0, "min":0, "max":0.95}
+        "structure":{"start_length":17, "min_length":2, "min":0, "max":8},
+        "life":{"start_length":6, "min_length":1, "min":9000, "max":100000},
+        "maturation_period":{"start_length":1, "min_length":1, "min":2, "max":5},
+        "refractory_period":{"start_length":1, "min_length":1, "min":1, "max":4},
+        "species_threshold":{"start_length":10, "start_zero":True, "min_length":1, "min":0, "max":10}
     }
 
     @staticmethod
@@ -16,10 +16,10 @@ class Lifeform:
         DNA = []
         info = Lifeform.TRAITS[trait]
         for i in range(0, info["start_length"]):
-            if info["format"] == "int":
+            if "start_zero" in info:
+                DNA.append(0)
+            else:
                 DNA.append(randint(info["min"], info["max"]))
-            if info["format"] == "float":
-                DNA.append(random() * (info["max"] - info["min"]) + info["min"])
         return DNA
 
     @staticmethod
@@ -34,15 +34,6 @@ class Lifeform:
             parentIndex = (parentIndex + 1) % len(parents)
             DNA.append(bit)
 
-        v = random()
-        if v <= 0.25:
-            if len(DNA) > Lifeform.TRAITS[trait]["min_length"]:
-                DNA.pop()
-        elif v >= 1 - 0.25:
-            if Lifeform.TRAITS[trait]["format"] == "int":
-                DNA.append(randint(Lifeform.TRAITS[trait]["min"], Lifeform.TRAITS[trait]["max"]))
-            elif Lifeform.TRAITS[trait]["format"] == "float":
-                DNA.append(random() * (Lifeform.TRAITS[trait]["max"] - Lifeform.TRAITS[trait]["min"]) + Lifeform.TRAITS[trait]["min"])
         return DNA
 
     @staticmethod
@@ -51,7 +42,7 @@ class Lifeform:
         for trait in Lifeform.TRAITS:
             DNA = Lifeform.GenerateDNARandom(trait)
             valueRange = [Lifeform.TRAITS[trait]["min"],Lifeform.TRAITS[trait]["max"]]
-            genes[trait] = Gene(trait, DNA, valueRange)
+            genes[trait] = Gene(trait, DNA, Lifeform.TRAITS[trait]["min_length"], valueRange)
         return genes
 
     @staticmethod
@@ -65,7 +56,7 @@ class Lifeform:
         for trait in traits:
             DNA = Lifeform.GenerateDNAFromParents(trait, parents)
             valueRange = [Lifeform.TRAITS[trait]["min"],Lifeform.TRAITS[trait]["max"]]
-            genes[trait] = Gene(trait, DNA, valueRange)
+            genes[trait] = Gene(trait, DNA, Lifeform.TRAITS[trait]["min_length"], valueRange)
         return genes           
 
     @staticmethod
@@ -103,10 +94,6 @@ class Lifeform:
             if trait not in a_genes:
                 diff += len(b_genes[trait].DNA)
         return same / (same + diff)
-
-    def PrintGenes(self):
-        for trait in self.genes:
-            print("[{0}] = {1}".format(trait, self.genes[trait].DNAString()))
         
 
     def __init__(self, parents):

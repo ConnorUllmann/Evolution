@@ -17,10 +17,17 @@ class Gene:
                     self.DNA[i] = randint(_min, _max)
                 except ValueError:
                     self.DNA[i] = random() * (self.max - self.min) + self.min
-
-    def __init__(self, trait, DNA, valueRange):
+        v = random()
+        if v <= 0.25:
+            if len(self.DNA) > self.minLength:
+                self.DNA.pop()
+        elif v >= 1 - 0.25:
+            self.DNA.append(randint(self.min, self.max))
+        
+    def __init__(self, trait, DNA, minLength, valueRange):
         self.trait = trait
         self.DNA = DNA
+        self.minLength = minLength
         self.valueRange = valueRange
         self.min = self.valueRange[0]
         self.max = self.valueRange[1]

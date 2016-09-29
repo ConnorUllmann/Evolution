@@ -10,7 +10,7 @@ from time import time
 class Body(Lifeform):
     
     ANGULAR_FRICTION = 0.8
-    FRICTION = 0.999
+    FRICTION = 0.96
 
     ID = 0
     bodies = []
@@ -58,7 +58,7 @@ class Body(Lifeform):
         speciesThreshold = 0
         for base in self.genes["species_threshold"].DNA:
             speciesThreshold += base
-        return max(min(speciesThreshold, 1), 0)
+        return max(min(speciesThreshold/100, 1), 0)
 
     def PartCountFromDNA(self):
         return int(len(self.genes["structure"].DNA)/2)
@@ -174,6 +174,11 @@ class Body(Lifeform):
             if type(part).__name__ == "Heart":
                 return True
         return False
+
+    def Print(self):
+        print(" --- Body --- ")
+        for trait in self.genes:
+            print("[{0}] {1}".format(trait, self.genes[trait].DNAString()))
 
     def Destroy(self):
         if not self.destroyed:
@@ -331,40 +336,60 @@ class Body(Lifeform):
 def CreateStructuredBody(position, genes):
     geneList = []
     for trait in genes:
-        geneList.append(Gene(trait, genes[trait][0], genes[trait][1]))
+        geneList.append(Gene(trait, genes[trait][0], genes[trait][1], genes[trait][2]))
     _genes = {}
     for gene in geneList:
         _genes[gene.trait] = gene
     return Body(position, [], _genes)
 
 def Setup():
+##    body0 = CreateStructuredBody((400, 200), {
+##        "structure":[[0, 0, 4, 2, 2, 2, 3, 3, 4, 6, 5, 5], "int", 2, [0, 8]],
+##        "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], "int", 1, [1, 100000]],
+##        "maturation_period":[[5], "int", 1, [1, 50]],
+##        "refractory_period":[[6], "int", 1, [4, 10]],
+##        "species_threshold":[[0.08], "float", 0, [0, 0.95]]
+##        })
+##    body1 = CreateStructuredBody((200, 200), {
+##        "structure":[[0, 0, 4, 6, 2, 2, 3, 3, 4, 2, 5, 5], "int", 2, [0, 8]],
+##        "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], "int", 1, [1, 100000]],
+##        "maturation_period":[[5], "int", 1, [1, 50]],
+##        "refractory_period":[[6], "int", 1, [4, 10]],
+##        "species_threshold":[[0.08], "float", 0, [0, 0.95]]
+##        })
     body0 = CreateStructuredBody((400, 200), {
-        "structure":[[0, 0, 4, 2, 2, 2, 3, 3, 4, 6, 5, 5], [0, 8]],
-        "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
-        "maturation_period":[[5], [1, 50]],
-        "refractory_period":[[6], [4, 10]],
-        "species_threshold":[[0.08], [0, 0.95]]
+        "structure":[[0, 1, 2, 3, 4, 5, 6, 7], 2, [0, 8]],
+        "life":[[0, 0, 0], 1, [1, 10]],
+        "maturation_period":[[1, 1], 1, [1, 50]],
+        "refractory_period":[[4], 1, [4, 6]],
+        "species_threshold":[[6, 7, 5, 5, 0, 9, 8, 9, 1, 2], 2, [0, 10]]
         })
     body1 = CreateStructuredBody((200, 200), {
-        "structure":[[0, 0, 4, 6, 2, 2, 3, 3, 4, 2, 5, 5], [0, 8]],
-        "life":[[100000, 100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
-        "maturation_period":[[5], [1, 50]],
-        "refractory_period":[[6], [4, 10]],
-        "species_threshold":[[0.08], [0, 0.95]]
+        "structure":[[7, 6, 5, 4, 3, 2, 1, 0], 2, [0, 8]],
+        "life":[[1, 1, 1], 2, [20, 30]],
+        "maturation_period":[[2, 2], 1, [1, 50]],
+        "refractory_period":[[3], 1, [8, 10]],
+        "species_threshold":[[0, 8, 9, 8, 5, 4, 5, 10, 1, 4], 0, [0, 10]]
         })
+##    body0.Print()
+##    body1.Print()
+##    bodyc = Body((300, 200), [body0, body1])
+##    bodyc.Print()
+##    input("")
+    
     body2 = CreateStructuredBody((250, 250), {
-        "structure":[[9, 0, 4, 6, 2, 2, 3, 3, 7, 2, 5, 5], [0, 8]],
-        "life":[[100000, 100000, 100000, 100000, 100000, 100000], [1, 100000]],
-        "maturation_period":[[5, 10], [1, 100]],
-        "refractory_period":[[6], [4, 10]],
-        "species_threshold":[[0.08], [0, 0.95]]
+        "structure":[[9, 0, 4, 6, 2, 2, 3, 3, 7, 2, 5, 5], 2, [0, 8]],
+        "life":[[100000, 100000, 100000, 100000, 100000, 100000], 1, [1, 100000]],
+        "maturation_period":[[5, 10], 1, [1, 100]],
+        "refractory_period":[[6], 1, [4, 10]],
+        "species_threshold":[[1, 5, 3, 9, 8, 8, 10, 7, 4, 2], 0, [0, 10]]
         })
     body2.SetAngle(-pi/2)
     
 
 def PreGame():
     #Setup()
-    for i in range(0, 100):
+    for i in range(0, 75):
         body = Body((randint(0, Screen.Width()), randint(0, Screen.Height())), [])
 
 maxGeneration = -1
@@ -377,7 +402,10 @@ def UpdateGame():
         maxGeneration = -1
 
     if len(Body.bodies) <= 3:
-        Body((random() * Screen.Width, random() * Screen.Height()), Body.bodies)
+        bodies = []
+        for body in Body.bodies:
+            bodies.append(body)
+        Body((int(random() * Screen.Width()), int(random() * Screen.Height())), bodies)
         print("Low population - generating children")
         maxGeneration = -1
 

@@ -213,20 +213,27 @@ class Propellor(Part):
         super().__init__(position, body, radius, 100, 50)
         self.color = (0, 0, 255)
         self.partProperty = partProperty % Propellor.ANGLES
+        self.phase = 0
+        self.propelledInCurrentPhase = False
 
     def Update(self):
         super().Update()
-        force = 0.03
-        angle = self.anglePropellor()
-        self.body.AddImpulse((self.body.centerOfMass[0], self.body.centerOfMass[1]), (self.x(), self.y()), (-force * cos(angle), -force * sin(angle)))
-        #print("Propellor: [{}]".format(partProperty))
-
+        self.phase = time()
+        if self.phase % 0.5 < 0.25:
+            if not self.propelledInCurrentPhase:
+                self.propelledInCurrentPhase = True
+                force = 3#0.03
+                angle = self.anglePropellor()
+                self.body.AddImpulse((self.body.centerOfMass[0], self.body.centerOfMass[1]), (self.x(), self.y()), (-force * cos(angle), -force * sin(angle)))
+        else:
+            self.propelledInCurrentPhase = False
     def anglePropellor(self):
         return self.partProperty * 2 * pi / Propellor.ANGLES + self.angle()
 
     def Render(self):
         super().Render()
-        distance = abs(sin(time()*10)) * (2 * self.radius)
+        
+        distance = abs(sin(self.phase*2*pi)) * (2 * self.radius)
         angle = self.anglePropellor()
         offset = (distance * cos(angle), distance * sin(angle))
         color = (128, 255, 255)
