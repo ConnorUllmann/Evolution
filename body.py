@@ -132,6 +132,8 @@ class Body(Lifeform):
         self.generation = self.GenerationFromParents(parents)
         self.speciesThreshold = self.SpeciesThresholdFromDNA()
 
+        self.half = "right" if self.x > Screen.Width()/2 else "left"
+
         mass = 0
         for part in self.parts:
             if part is None:
@@ -292,17 +294,19 @@ class Body(Lifeform):
                 n += 1
                 if n > len(self.parts):
                     return
-            buffer = hypot(lastPart.x() - self.x, lastPart.y() - self.y)
-            if self.x < -buffer:
-                self.x = Screen.Width() + buffer #-buffer
-            if self.y < -buffer:
-                self.y = Screen.Height() + buffer #-buffer
-            if self.x > Screen.Width() + buffer:
-                self.x = -buffer #Screen.Width() + buffer
-            if self.y > Screen.Height() + buffer:
-                self.y = -buffer #Screen.Height() + buffer
-            #if self.x < -buffer or self.x > Screen.Width() + buffer or self.y < -buffer or self.y > Screen.Height() + buffer:
-            #    self.Destroy()
+            buffer = 2*hypot(lastPart.x() - self.x, lastPart.y() - self.y)
+            boundsLeft = -buffer if self.half is None or self.half == "left" else Screen.Width()/2+buffer
+            boundsRight = Screen.Width() + buffer if self.half is None or self.half == "right" else Screen.Width()/2 - buffer
+            boundsTop = -buffer
+            boundsBottom = Screen.Height() + buffer
+            if self.x < boundsLeft:
+                self.x = boundsLeft #boundsRight
+            if self.y < boundsTop:
+                self.y = boundsBottom
+            if self.x > boundsRight:
+                self.x = boundsRight #boundsLeft
+            if self.y > boundsBottom:
+                self.y = boundsTop
 
     def Update(self):
         for part in self.parts:
@@ -389,7 +393,7 @@ def Setup():
 
 def PreGame():
     #Setup()
-    for i in range(0, 75):
+    for i in range(0, 100):
         body = Body((randint(0, Screen.Width()), randint(0, Screen.Height())), [])
 
 maxGeneration = -1
