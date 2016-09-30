@@ -229,7 +229,7 @@ class Body(Lifeform):
             return None
         if len(Part.parts) > 200:
             return None
-        if other in self.bannedMates:
+        if other in self.bannedMates or self in other.bannedMates:
             return None
         if not Body.AreSameSpecies(self, other):
             return None
