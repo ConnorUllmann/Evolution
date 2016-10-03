@@ -7,6 +7,7 @@ from random import shuffle, randint, random
 class Part:
 
     SEPARATION_MULT = 1.2
+    ELECTRIFICATION_TIME = 5
 
     ID = 0
 
@@ -55,6 +56,7 @@ class Part:
         self.timeStart = time()
         self.destroyed = False
         self.highlight = False
+        self.electrifiedTime = -1
         #Screen.Instance.AddUpdateFunction(self, self.Update)
         #Screen.Instance.AddRenderFunction(self, self.Render)
 
@@ -63,8 +65,17 @@ class Part:
             self.destroyed = True
             Part.parts.remove(self)
             self.body.RemovePart(self)
+            for part in self.body.parts:
+                if part is None:
+                    continue
+                part.CheckNeighbors(self.body.parts)
             #Screen.Instance.RemoveUpdateFunctions(self)
             #Screen.Instance.RemoveRenderFunctions(self)
+
+    def CheckNeighbors(self, parts):
+        if len(self.Neighbors(parts)) <= 0:
+          self.Destroy()
+        
 
     def Collides(self, part):
         return CirclesCollide((self.x(), self.y()), self.radius, (part.x(), part.y()), part.radius)
@@ -73,13 +84,21 @@ class Part:
     #"parts" is a list of all parts this body collides with on other bodies
     def Collide(self, parts):
         for part in parts:
+            if part is None:
+                continue
             part.SubtractMass(self.power * (self.body.speed2()+1)/30)
 
     def SubtractMass(self, amount):
         self.mass -= max(amount - self.armor, 0)
         if self.mass <= 0:
             self.mass = 0
-            self.Destroy() 
+            self.Destroy()
+
+    def Electrified(self):
+        return time() - self.electrifiedTime <= Part.ELECTRIFICATION_TIME
+
+    def Electrify(self):
+        self.electrifiedTime = time()
         
     #Gets a random part that is not null from the list of parts
     @staticmethod
@@ -91,19 +110,17 @@ class Part:
                 return parts[i]
         return None
 
-    def Neighbors(self):
+    def Neighbors(self, parts):
         collidedParts = []
-        for part in self.body.parts:
+        for part in parts:
             if part is self or part is None:
                 continue
             if LengthSq((part.x() - self.x(), part.y() - self.y())) <= (part.radius + Part.SEPARATION_MULT * self.body.radius)**2:
                 collidedParts.append(part)
         return collidedParts
                 
-    def Setup(self, body):
-        #if len(self.Neighbors() <= 0):
-        #   self.body.Destroy()
-        pass
+    def Setup(self, parts):
+        self.CheckNeighbors(parts)
 
     def Update(self):
         self.body.SubtractLife(self.cost)
@@ -148,6 +165,16 @@ class Bone(Part):
         self.color = (255, 250, 230)
         #print("Bone: [{}]".format(partProperty))
 
+    def Collide(self, parts):
+        super().Collide(parts)
+
+        if len(parts) <= 0:
+            return
+
+        for part in parts:
+            force = 0.5
+            angle = atan2(part.x() - self.x(), part.y() - self.y())
+            part.body.AddImpulse((part.body.centerOfMass[0], part.body.centerOfMass[1]), (part.x(), part.y()), (-force * cos(angle), -force * sin(angle)))
 
 class Heart(Part):
     
@@ -219,31 +246,50 @@ class Propellor(Part):
     def Update(self):
         super().Update()
         self.phase = time()
-        if self.phase % 0.5 < 0.25:
-            if not self.propelledInCurrentPhase:
-                self.propelledInCurrentPhase = True
-                force = 3#0.03
-                angle = self.anglePropellor()
-                self.body.AddImpulse((self.body.centerOfMass[0], self.body.centerOfMass[1]), (self.x(), self.y()), (-force * cos(angle), -force * sin(angle)))
-        else:
-            self.propelledInCurrentPhase = False
+        if self.Electrified():
+            if self.phase % 0.5 < 0.25:
+                if not self.propelledInCurrentPhase:
+                    self.propelledInCurrentPhase = True
+                    force = 3#0.03
+                    angle = self.anglePropellor()
+                    self.body.AddImpulse((self.body.centerOfMass[0], self.body.centerOfMass[1]), (self.x(), self.y()), (-force * cos(angle), -force * sin(angle)))
+            else:
+                self.propelledInCurrentPhase = False
     def anglePropellor(self):
         return self.partProperty * 2 * pi / Propellor.ANGLES + self.angle()
 
     def Render(self):
         super().Render()
-        
-        distance = abs(sin(self.phase*2*pi)) * (2 * self.radius)
-        angle = self.anglePropellor()
-        offset = (distance * cos(angle), distance * sin(angle))
-        color = (128, 255, 255)
-        Screen.DrawCircle((self.x() + offset[0], self.y() + offset[1]), self.radius / 2, color)
-        Screen.DrawLine((self.x(), self.y()), (self.x() + offset[0], self.y() + offset[1]), color)
-        
+
+        if self.Electrified():
+            self.color = (0, 0, 255)
+            #Position propellor
+            distance = abs(sin(self.phase*2*pi)) * (2 * self.radius)
+            angle = self.anglePropellor()
+            offset = (distance * cos(angle), distance * sin(angle))
+            color = (128, 255, 255)
+            Screen.DrawCircle((self.x() + offset[0], self.y() + offset[1]), self.radius / 2, color)
+            Screen.DrawLine((self.x(), self.y()), (self.x() + offset[0], self.y() + offset[1]), color)
+        else:
+            self.color = (80, 80, 80)
 
         
 class Pulser(Part):
     def __init__(self, position, body, radius, partProperty):
         super().__init__(position, body, radius, 500, 100)
         self.color = (255, 255, 0)
+        self.pulse = time()
         #print("Pulser: [{}]".format(partProperty))
+
+    def Setup(self, parts):
+        self.neighbors = self.Neighbors(parts)
+
+    def Update(self):
+        self.pulse = time()
+        for neighbor in self.neighbors:
+            neighbor.Electrify()
+
+    def Render(self):
+        v = (sin(((self.pulse * 12) % 12 / 12) * 2 * pi) + 1) / 2
+        color = (255, 255, 128 * v)
+        Screen.DrawCircle((self.x(), self.y()), int(self.radius * (1 + 0.25 * v)), color)

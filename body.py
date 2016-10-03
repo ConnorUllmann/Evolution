@@ -74,7 +74,7 @@ class Body(Lifeform):
 # --- // Properties From DNA ---
 
     def GenerateParts(self):
-        parts = []
+        self.parts = []
         partCount = self.PartCountFromDNA()
         for i in range(0, partCount):
             spiralPosition = Spiral(i)
@@ -84,15 +84,14 @@ class Body(Lifeform):
             _radius = self.radius
             _property = self.PartPropertyFromDNA(i)
             part = Part.NewPartFromIndex(partIndex, _position, _body, _radius, _property)
-            parts.append(part)
-        part0 = Part.FirstRealPart(parts, False)
+            self.parts.append(part)
+        part0 = Part.FirstRealPart(self.parts, False)
         if part0 is not None:
             part0.highlight = True
-        for part in parts:
+        for part in self.parts:
             if part is None:
                 continue
-            part.Setup(parts)
-        return parts
+            part.Setup(self.parts)
 
     @staticmethod
     def GenerationFromParents(parents):
@@ -103,6 +102,22 @@ class Body(Lifeform):
             if parent.generation > parentsMaxGeneration:
                 parentsMaxGeneration = parent.generation
         return parentsMaxGeneration+1
+
+    counts = {}
+    countsPart = {}
+    @staticmethod
+    def AddToHalf(half, partsCount):
+        if half not in Body.counts:
+            Body.counts[half] = 0
+            Body.countsPart[half] = 0
+        Body.counts[half] += 1
+        Body.countsPart[half] += partsCount
+        
+    @staticmethod
+    def RemoveFromHalf(half, partsCount):
+        if half in Body.counts:
+            Body.counts[half] -= 1
+            Body.countsPart[half] -= partsCount
 
     def __init__(self, position, parents, genes=None):
         self.GenerateID()
@@ -125,14 +140,12 @@ class Body(Lifeform):
         self.maturationPeriod = self.MaturationPeriodFromDNA()
         self.timeStart = time()
         self.bannedMates = []
-        self.parts = self.GenerateParts()
+        self.GenerateParts()
         self.partsCount = self.PartsCount() #The number of actual parts (not including empty slots)
         self.destroyed = False
         self.lifeStart = self.life = self.StartingLifeFromDNA()
         self.generation = self.GenerationFromParents(parents)
         self.speciesThreshold = self.SpeciesThresholdFromDNA()
-
-        self.half = "right" if self.x > Screen.Width()/2 else "left"
 
         mass = 0
         for part in self.parts:
@@ -150,6 +163,11 @@ class Body(Lifeform):
             if distanceSq > maxDistanceSq:
                 maxDistanceSq = distanceSq
                 maxDistancePart = part
+        
+        self.half = "right" if self.x > Screen.Width()/2 else "left"
+        self.partsCountStart = self.PartsCount()
+        Body.AddToHalf(self.half, self.partsCountStart)
+        
         self.radius = sqrt(maxDistanceSq) + maxDistancePart.radius
         
         self.SetAngle(random() * 2 * pi)
@@ -192,6 +210,7 @@ class Body(Lifeform):
             Screen.Instance.RemoveUpdateFunctions(self)
             Screen.Instance.RemoveRenderFunctions(self)
             Body.bodies.remove(self)
+            Body.RemoveFromHalf(self.half, self.partsCountStart)
 
     #Do not call explicitly--this is used by parts' destroy function when they are removed
     def RemovePart(self, part):
@@ -229,7 +248,7 @@ class Body(Lifeform):
     def Mate(self, other):
         if time() - self.timeStart <= self.maturationPeriod:
             return None
-        if len(Part.parts) > 200:
+        if Body.countsPart[self.half] > 200: #len(Part.parts) > 200:
             return None
         if other in self.bannedMates or self in other.bannedMates:
             return None
@@ -295,18 +314,25 @@ class Body(Lifeform):
                 if n > len(self.parts):
                     return
             buffer = 2*hypot(lastPart.x() - self.x, lastPart.y() - self.y)
-            boundsLeft = -buffer if self.half is None or self.half == "left" else Screen.Width()/2+buffer
-            boundsRight = Screen.Width() + buffer if self.half is None or self.half == "right" else Screen.Width()/2 - buffer
+            boundsLeft = -buffer #if self.half is None or self.half == "left" else Screen.Width()/2+buffer
+            boundsRight = Screen.Width() + buffer #if self.half is None or self.half == "right" else Screen.Width()/2 - buffer
             boundsTop = -buffer
             boundsBottom = Screen.Height() + buffer
+            moved = False
             if self.x < boundsLeft:
                 self.x = boundsLeft #boundsRight
+                moved = True
             if self.y < boundsTop:
                 self.y = boundsBottom
+                moved = True
             if self.x > boundsRight:
                 self.x = boundsRight #boundsLeft
+                moved = True
             if self.y > boundsBottom:
                 self.y = boundsTop
+                moved = True
+            if moved:
+                self.angle += 0.05 * (random() - 0.5)
 
     def Update(self):
         for part in self.parts:
@@ -420,7 +446,7 @@ def UpdateGame():
             maxGeneration = body.generation
             print("Generation {}'s first member was just born.".format(maxGeneration))
     speciesThresholdAverage = speciesThresholdSum / len(Body.bodies)
-    pygame.display.set_caption("SpeciesThresholdAverage: {}".format(int(speciesThresholdAverage*1000)/1000))
+    pygame.display.set_caption("Parts: {}".format(len(Part.parts)))#"SpeciesThresholdAverage: {}".format(int(speciesThresholdAverage*1000)/1000))
 
 def RenderGame():
     pass
