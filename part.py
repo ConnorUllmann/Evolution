@@ -57,6 +57,7 @@ class Part:
         self.destroyed = False
         self.highlight = False
         self.electrifiedTime = -1
+        self.neighbors = []
         #Screen.Instance.AddUpdateFunction(self, self.Update)
         #Screen.Instance.AddRenderFunction(self, self.Render)
 
@@ -71,11 +72,6 @@ class Part:
                 part.CheckNeighbors(self.body.parts)
             #Screen.Instance.RemoveUpdateFunctions(self)
             #Screen.Instance.RemoveRenderFunctions(self)
-
-    def CheckNeighbors(self, parts):
-        if len(self.Neighbors(parts)) <= 0:
-          self.Destroy()
-        
 
     def Collides(self, part):
         return CirclesCollide((self.x(), self.y()), self.radius, (part.x(), part.y()), part.radius)
@@ -118,12 +114,17 @@ class Part:
             if LengthSq((part.x() - self.x(), part.y() - self.y())) <= (part.radius + Part.SEPARATION_MULT * self.body.radius)**2:
                 collidedParts.append(part)
         return collidedParts
+
+    def CheckNeighbors(self, parts):
+        self.neighbors = self.Neighbors(parts)
+        if len(self.neighbors) <= 0:
+          self.Destroy()
                 
     def Setup(self, parts):
         self.CheckNeighbors(parts)
 
     def Update(self):
-        self.body.SubtractLife(self.cost)
+        self.body.SubtractLife(self.cost * (8 - len(self.neighbors)))
         if self.mass < self.massStart:
             if self.mass + self.rateRepair >= self.massStart:
                 self.mass = self.massStart
@@ -188,6 +189,7 @@ class Heart(Part):
         #print("Heart: [{}]".format(partProperty))
 
     def Setup(self, parts):
+        super().Setup(parts)
         hearts = [self]
         phaseSum = self.phase
         for part in parts:
@@ -281,15 +283,13 @@ class Pulser(Part):
         self.pulse = time()
         #print("Pulser: [{}]".format(partProperty))
 
-    def Setup(self, parts):
-        self.neighbors = self.Neighbors(parts)
-
     def Update(self):
         self.pulse = time()
         for neighbor in self.neighbors:
             neighbor.Electrify()
 
     def Render(self):
+        super().Render()
         v = (sin(((self.pulse * 12) % 12 / 12) * 2 * pi) + 1) / 2
         color = (255, 255, 128 * v)
-        Screen.DrawCircle((self.x(), self.y()), int(self.radius * (1 + 0.25 * v)), color)
+        #Screen.DrawCircle((self.x(), self.y()), int(self.radius * (1 + 0.25 * v)), color)

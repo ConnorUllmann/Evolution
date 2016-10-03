@@ -446,7 +446,9 @@ def UpdateGame():
             maxGeneration = body.generation
             print("Generation {}'s first member was just born.".format(maxGeneration))
     speciesThresholdAverage = speciesThresholdSum / len(Body.bodies)
-    pygame.display.set_caption("Parts: {}".format(len(Part.parts)))#"SpeciesThresholdAverage: {}".format(int(speciesThresholdAverage*1000)/1000))
+
+    #"Parts: {}".format(len(Part.parts)))#
+    pygame.display.set_caption("SpeciesThresholdAverage: {}".format(int(speciesThresholdAverage*1000)/1000))
 
 def RenderGame():
     pass
