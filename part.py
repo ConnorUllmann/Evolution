@@ -292,4 +292,4 @@ class Pulser(Part):
         super().Render()
         v = (sin(((self.pulse * 12) % 12 / 12) * 2 * pi) + 1) / 2
         color = (255, 255, 128 * v)
-        #Screen.DrawCircle((self.x(), self.y()), int(self.radius * (1 + 0.25 * v)), color)
+        Screen.DrawCircle((self.x(), self.y()), int(self.radius * (1 + 0.25 * v)), color)
