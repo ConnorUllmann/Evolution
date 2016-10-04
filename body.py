@@ -29,6 +29,8 @@ class Body(Lifeform):
         return self.angle
 
     def speed2(self):
+        if self.mass == 0:
+            return 0
         return LengthSq(Scale(self.momentum, 1/self.mass))
     
     def speed(self):
