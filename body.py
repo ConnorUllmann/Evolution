@@ -441,13 +441,14 @@ def UpdateGame():
         print("Low population - generating children")
         maxGeneration = -1
 
-    speciesThresholdSum = 0
-    for body in Body.bodies:
-        speciesThresholdSum += body.speciesThreshold
-        if body.generation > maxGeneration:
-            maxGeneration = body.generation
-            print("Generation {}'s first member was just born.".format(maxGeneration))
-    speciesThresholdAverage = speciesThresholdSum / len(Body.bodies)
+    if len(Body.bodies) > 0:
+        speciesThresholdSum = 0
+        for body in Body.bodies:
+            speciesThresholdSum += body.speciesThreshold
+            if body.generation > maxGeneration:
+                maxGeneration = body.generation
+                print("Generation {}'s first member was just born.".format(maxGeneration))
+        speciesThresholdAverage = speciesThresholdSum / len(Body.bodies)
 
     #"Parts: {}".format(len(Part.parts)))#
     pygame.display.set_caption("SpeciesThresholdAverage: {}".format(int(speciesThresholdAverage*1000)/1000))
