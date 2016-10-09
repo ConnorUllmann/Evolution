@@ -81,14 +81,14 @@ class Screen:
         self.clearColor = clearColor
         self.width = width
         self.height = height
+        pygame.init()
+        pygame.display.init()
         self.screen = pygame.display.set_mode((self.width, self.height))
         self.background = pygame.Surface(self.screen.get_size())
         self.background = self.background.convert()
         self.screen.set_alpha(None)
         self.ClearScreen()
-        pygame.init()
         #pygame.font.init()
-        pygame.display.init()
     
     def Update(self):
         while len(self.updateFunctionsAddQueue) > 0:

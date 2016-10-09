@@ -4,7 +4,8 @@ from gene import Gene
 class Lifeform:
 
     TRAITS = {
-        "constants":{"start_length":12, "min_length":12, "min":-1000000, "max":1000000},
+        "constants":{"start_length":16, "min_length":16, "start_zero":True, "min":-1000000, "max":1000000},
+        "shifts":{"start_length":16, "min_length":16, "start_zero":True, "min":-1000000, "max":1000000},
         "mutation_magnitude":{"start_length":1, "min_length":1, "min":0, "max":2}
         }
 

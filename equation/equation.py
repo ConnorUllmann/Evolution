@@ -8,6 +8,10 @@ class Equation(Lifeform):
     HistoricMinScore = None
 
     BestEquationsAllTimePair = []
+    
+    @staticmethod
+    def ClearBestEquations():
+        Equation.BestEquationsAllTimePair = []
 
     @staticmethod
     def Generate(parents, targets):
@@ -52,7 +56,7 @@ class Equation(Lifeform):
             Equation.BestEquationsAllTimePair.pop()
         
         #Construct set of breeding equations
-        newStockCount = min(10, len(pairs))
+        newStockCount = min(3, len(pairs))
         pairsFront = pairs[:newStockCount]
         pairsFinal = list(Equation.BestEquationsAllTimePair)
         #shuffle(pairsFront)
@@ -67,8 +71,8 @@ class Equation(Lifeform):
         #Set lowest all-time score
         if Equation.HistoricMinScore is None or minScorePair[0] < Equation.HistoricMinScore:
             Equation.HistoricMinScore = minScorePair[0]
-            print("({}) Min. Score: {}".format(datetime.now(), Equation.HistoricMinScore))
-            print("y = {}".format(str(minScorePair[1])))
+            #print("({}) Min. Score: {}".format(datetime.now(), Equation.HistoricMinScore))
+            #print("y = {}".format(str(minScorePair[1])))
 
         #print("-----------------------------------------------")
         #for pair in Equation.BestEquationsAllTimePair:
@@ -95,14 +99,16 @@ class Equation(Lifeform):
     def Score(self, targets):
         score = 0
         for target in targets:
-            score += abs(self.y(target[0]) - target[1])**4
+            score += abs(self.y(target[0]) - target[1])
         return score
 
     def y(self, x):
         y = 0
         i = 0
-        for base in self.genes["constants"].DNA:
-            y += base * pow(x, max(2*i-1, 0))
+        for i in range(0, len(self.genes["constants"].DNA), 2):
+            base0 = self.genes["constants"].DNA[i]
+            base1 = self.genes["shifts"].DNA[i] / 100000
+            y += base0 * pow(x - base1, i)
             i += 1
         return y
 
@@ -113,7 +119,7 @@ class Equation(Lifeform):
         i = len(DNA) - 1
         while i >= 0:
             if True or int(DNA[i]) != 0:
-                s += str(int(DNA[i])) + ("x^{}".format(max(2*i-1, 0)) if i != 0 else "")
+                s += str(int(DNA[i])) + ("x^{}".format(i) if i != 0 else "")
                 if i >= 1:
                     s += " + "
             i -= 1

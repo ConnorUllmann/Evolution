@@ -32,6 +32,14 @@ class Graph:
                 points.append(self.DrawPos(x, y))
             Screen.DrawLines(points, self.equationColors[i])
 
+        for equation in Equation.BestEquationsAllTimePair:
+            points = []
+            for target in self.targets:
+                x = target[0]
+                y = equation[1].y(x)
+                points.append(self.DrawPos(x, y))
+            Screen.DrawLines(points, (0, 255, 0), 3)            
+
         for target in self.targets:
             x = target[0]
             y = target[1]
@@ -43,32 +51,39 @@ class Graph:
         sumMutationMagnitude = 0
         for equation in self.equations:
             sumMutationMagnitude += equation.genes["mutation_magnitude"].DNA[0]
-            self.equationColors.append(Screen.RandomColor())
+            color = Screen.RandomColor()
+            color = (color[0]/2, color[1]/2, color[2]/2)
+            self.equationColors.append(color)
         #print(sumMutationMagnitude / len(self.equations))
 
     def SetTargets(self, targets):
         self.targets = targets
-        self.xRange = [0, 0]
-        for target in self.targets:
-            if target[0] < self.xRange[0]:
-                self.xRange[0] = target[0]
-            if target[0] > self.xRange[1]:
-                self.xRange[1] = target[0]
-        self.yRange = [0, 0]
-        for target in self.targets:
-            if target[1] < self.yRange[0]:
-                self.yRange[0] = target[1]
-            if target[1] > self.yRange[1]:
-                self.yRange[1] = target[1]
+        self.xRange = [0, 1]
+##        for target in self.targets:
+##            if target[0] < self.xRange[0]:
+##                self.xRange[0] = target[0]
+##            if target[0] > self.xRange[1]:
+##                self.xRange[1] = target[0]
+        self.yRange = [0, 10000]
+##        for target in self.targets:
+##            if target[1] < self.yRange[0]:
+##                self.yRange[0] = target[1]
+##            if target[1] > self.yRange[1]:
+##                self.yRange[1] = target[1]
 
     def Evolve(self):
         self.SetEquations(Equation.Generate(self.equations, self.targets))
 
+    def ScreenPositionToXYValue(self, sp):
+        x = (self.xRange[1] - self.xRange[0]) * (sp[0] - self.xBounds[0]) / (self.xBounds[1] - self.xBounds[0]) + self.xRange[0]
+        y = (self.yRange[1] - self.yRange[0]) * (sp[1] - self.yBounds[0]) / (self.yBounds[1] - self.yBounds[0]) + self.yRange[0]
+        return (x, y)
+
     def __init__(self, equations, targets):
         self.id = Graph.GenerateID()
         
-        self.xBounds = (100, Screen.Width() - 100)
-        self.yBounds = (100, Screen.Height() - 100)
+        self.xBounds = (0, Screen.Width() - 0)
+        self.yBounds = (0, Screen.Height() - 0)
         
         self.SetEquations(equations)
         self.SetTargets(targets)
