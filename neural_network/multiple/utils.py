@@ -38,6 +38,7 @@ def Heartbeat(x):
 # normalise them between 0 and 1.
 def Sigmoid(x):
     return 1 / (1 + exp(-x))
+        
 
 # The derivative of the Sigmoid function.
 # This is the gradient of the Sigmoid curve.
