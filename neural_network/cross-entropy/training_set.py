@@ -4,19 +4,19 @@ from utils import *
 
 class TrainingSet:
     def __init__(self, bitLengthInput, bitLengthOutput, function, testProportion=0.1):        
-        inputBinarySet = []
-        outputBinarySet = []
+        xBinarySet = []
+        yBinarySet = []
 
         xMax = int(pow(2, bitLengthInput))
         for x in range(0, xMax):
-            inputBinaryList = Binary(x, bitLengthInput, True)
-            inputBinarySet.append(inputBinaryList)
-            y = Binary(function(*inputBinaryList), bitLengthOutput, True)
-            outputBinarySet.append(y)
+            xBinaryList = Binary(x, bitLengthInput, True)
+            yBinaryList = Binary(function(*xBinaryList), bitLengthOutput, True)
+            xBinarySet.append(xBinaryList)
+            yBinarySet.append(yBinaryList)
         
         tests = []
-        for i, o in zip(array(inputBinarySet), array(outputBinarySet)):
-            tests.append((i, o))
+        for x, y in zip(array(xBinarySet), array(yBinarySet)):
+            tests.append((x, y))
 
         if len(tests) <= 0:
             self.exams = []

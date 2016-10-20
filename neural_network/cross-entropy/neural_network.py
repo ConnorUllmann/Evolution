@@ -135,6 +135,6 @@ def GetTrainedNeuralNetworkForFunction(sizes, function, *args):
     network.save("last-test-network.txt")
     return network
 
-network = GetTrainedNeuralNetworkForFunction([12, 14, 16, 14, 7], Add, 0.2, 50000, 30, 1, 0)
+network = GetTrainedNeuralNetworkForFunction([10, 20, 24, 20, 6], Add, 0.2, 50000, 43, 1, 0)
 #network = GetTrainedNeuralNetworkForFunction([6, 12, 16, 6, 1], Xor, 0.2, 10000, 8, 5, 0)
 #network = GetTrainedNeuralNetworkForFunction([3, 4, 2, 1], Opp)
