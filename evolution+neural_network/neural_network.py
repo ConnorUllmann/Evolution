@@ -88,11 +88,12 @@ class NeuralNetwork():
                     correct = False
                     break
             outputDecimal = self.output(input, True)
-            print("{} {} = {} {} {} = {}".format(label, input, outputExpected, "-   -" if correct else "- @ -", output, outputDecimal))
+            #print("{} {} = {} {} {} = {}".format(label, input, outputExpected, "-   -" if correct else "- @ -", output, outputDecimal))
             numberCorrect += int(correct)
         
         print("\n{} / {} = {}%".format(numberCorrect, numberTotal, int(numberCorrect / numberTotal * 100)))
-
+        return numberCorrect / numberTotal
+    
     def save(self, filename):
         data = {"sizes": self.sizes,
                 "weights": [w.tolist() for w in self.weights],

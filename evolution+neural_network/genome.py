@@ -1,27 +1,25 @@
 from random import random, randint, shuffle
 from gene import Gene
 
-class Lifeform:
+class Genome:
 
-    TRAITS = {
-        "constants":{"start_length":16, "min_length":16, "start_zero":True, "min":-1000000, "max":1000000},
-        "shifts":{"start_length":16, "min_length":16, "start_zero":True, "min":-1000000, "max":1000000},
-        "mutation_magnitude":{"start_length":1, "min_length":1, "min":0, "max":2}
-        }
+    def __str__(self):
+        s = ""
+        for trait in self.genes:
+            s += "{} {}\n".format(trait, self.genes[trait])
+        return s[:-2]
 
-    @staticmethod
-    def GenerateDNARandom(trait):
+    def generateDNARandom(self, trait):
         DNA = []
-        info = Lifeform.TRAITS[trait]
+        info = self.structure[trait]
         for i in range(0, info["start_length"]):
-            if "start_zero" in info:
+            if "start_zero" in info and info["start_zero"] is True:
                 DNA.append(0)
             else:
                 DNA.append(randint(info["min"], info["max"]))
         return DNA
 
-    @staticmethod
-    def GenerateDNAFromParents(trait, parents):
+    def generateDNAFromParents(self, trait, parents):
         shuffle(parents)
         DNA = []
         for i in range(0, len(parents[0].genes[trait].DNA)):
@@ -35,17 +33,15 @@ class Lifeform:
 
         return DNA
 
-    @staticmethod
-    def GenerateGenesRandom():
+    def generateGenesRandom(self):
         genes = {}
-        for trait in Lifeform.TRAITS:
-            DNA = Lifeform.GenerateDNARandom(trait)
-            valueRange = [Lifeform.TRAITS[trait]["min"],Lifeform.TRAITS[trait]["max"]]
-            genes[trait] = Gene(trait, DNA, Lifeform.TRAITS[trait]["min_length"], valueRange)
+        for trait in self.structure:
+            DNA = self.generateDNARandom(trait)
+            info = self.structure[trait]
+            genes[trait] = Gene(trait, DNA, info["min_length"], info["min"], info["max"], info["mutationMagnitude"])
         return genes
 
-    @staticmethod
-    def GenerateGenesFromParents(parents):
+    def generateGenesFromParents(self, parents):
         genes = {}
         traitsDict = {}
         for parent in parents:
@@ -53,26 +49,26 @@ class Lifeform:
                 traitsDict[trait] = True
         traits = list(traitsDict.keys())
         for trait in traits:
-            DNA = Lifeform.GenerateDNAFromParents(trait, parents)
-            valueRange = [Lifeform.TRAITS[trait]["min"],Lifeform.TRAITS[trait]["max"]]
-            genes[trait] = Gene(trait, DNA, Lifeform.TRAITS[trait]["min_length"], valueRange)
+            DNA = Genome.GenerateDNAFromParents(trait, parents)
+            info = self.structure[trait]
+            genes[trait] = Gene(trait, DNA, info["min_length"], info["min"], info["max"], info["mutationMagnitude"])
         return genes           
 
-    @staticmethod
-    def GenerateGenes(parents):
+    def generateGenes(self, parents):
         if parents is not None and len(parents) > 0:
-            return Lifeform.GenerateGenesFromParents(parents)
+            self.genes = self.generateGenesFromParents(parents)
         else:
-            return Lifeform.GenerateGenesRandom()
+            self.genes = self.generateGenesRandom()
+
+    def mutateGenes(self):
+        for trait in self.genes:
+            self.genes[trait].mutate()
+
+    def compare(other):
+        return Chromosome.CompareGenes(self.genes, other.genes)
 
     @staticmethod
-    def MutateGenes(genes, mutationMagnitude):
-        for trait in genes:
-            genes[trait].Mutate(mutationMagnitude)
-        return genes
-
-    @staticmethod
-    def CompareGenomes(a_genes, b_genes):
+    def CompareGenes(a_genes, b_genes):
         same = 0
         diff = 0
         for trait in a_genes:
@@ -93,9 +89,11 @@ class Lifeform:
             if trait not in a_genes:
                 diff += len(b_genes[trait].DNA)
         return same / (same + diff)
-        
 
-    def __init__(self, parents):
-        self.genes = Lifeform.GenerateGenes(parents)
-        mutationMagnitude = self.genes["mutation_magnitude"].DNA[0]
-        self.genes = Lifeform.MutateGenes(self.genes, mutationMagnitude)
+    def __init__(self, parents, structure):
+        self.structure = structure
+        self.generateGenes(parents)
+        #self.mutateGenes()
+
+    #def __getitem__(self, trait):
+    #    return self.genes[trait]

@@ -1,34 +1,53 @@
 from neural_network import NeuralNetwork
 from training_set import TrainingSet
+from genome import Genome
 from utils import *
 
-def GetTrainedNeuralNetworkForFunction(sizes, function, *args):
-    if len(sizes) < 2 or function is None:
-        return None
+class Brain():
 
-    testProportion = 0.2 if len(args) <= 0 else args[0]
-    iterations = 10000 if len(args) <= 1 else args[1]
-    batchSize = 30 if len(args) <= 2 else args[2]
-    learningRate = 1 if len(args) <= 3 else args[3]
-    regularization = 0.0 if len(args) <= 4 else args[4]
+    def sumDNAForTrait(self, trait):
+        return sum(self.genome.genes[trait].DNA)
+
+    def initializeAndTrainNeuralNetwork(self, function, nInput, nOutput):
+        layers = [nInput]
+        layers.extend(self.genome.genes["hidden_layers"].DNA)
+        layers.append(nOutput)
+        iterations = self.sumDNAForTrait("iterations")
+        batchSize = self.sumDNAForTrait("batch_size")
+        learningRate = self.sumDNAForTrait("learning_rate") / 1000
+        regularization = 0
+
+        self.trainingSet = TrainingSet(nInput, nOutput, function, 0.25)
+        self.neuralNetwork = NeuralNetwork(layers)
+        self.neuralNetwork.train(self.trainingSet.tests, iterations, batchSize, learningRate, regularization)
+        self.neuralNetwork.test(self.trainingSet.tests, "test")
+
+    def test(self):
+        self.score = self.neuralNetwork.test(self.trainingSet.exams, "EXAM")
+
+    def initializeGenome(self, parents):
+        self.genome = Genome(parents, {
+            "hidden_layers":{"start_length":2, "min_length":0, "start_zero":False, "min":1, "max":12, "mutationMagnitude":2},
+            "iterations":{"start_length":4, "min_length":1, "start_zero":False, "min":1, "max":500, "mutationMagnitude":100},
+            "batch_size":{"start_length":4, "min_length":1, "start_zero":False, "min":1, "max":10, "mutationMagnitude":2},
+            "learning_rate":{"start_length":10, "min_length":1, "start_zero":False, "min":1, "max":100, "mutationMagnitude":50}
+            })
+        print(self.genome)
     
-    trainingSet = TrainingSet(sizes[0], sizes[-1], function, testProportion)
-    network = NeuralNetwork(sizes)
-    network.train(trainingSet.tests, iterations, batchSize, learningRate, regularization)
-    print("\n---------------------- TESTS ----------------------")
-    network.test(trainingSet.tests, "Test")
-    print("\n---------------------- EXAMS ----------------------")
-    network.test(trainingSet.exams, "Exam")
-    network.save("last-test-network.txt")
-    return network
+    def __init__(self, parents):
+        self.score = None
+        self.initializeGenome(parents)
 
-def Run(x):
-    if x == 0:
-        network = GetTrainedNeuralNetworkForFunction([6, 12, 16, 6, 1], Xor, 0.2, 10000, 8, 1, 0)
-    elif x == 1:
-        network = GetTrainedNeuralNetworkForFunction([3, 4, 2, 1], Opp, 0.25, 10000, 3, 3, 0)
-    else: #GOOD
-        network = GetTrainedNeuralNetworkForFunction([6, 14, 16, 14, 4], Add, 0.2, 5000, 30, 1, 0)
+    def train(self, function, nInput, nOutput):
+        self.initializeAndTrainNeuralNetwork(function, nInput, nOutput)
+
+def Next(parents):
+    brain = Brain(parents)
+    brain.train(Xor, 10, 1)
+    brain.test()
+    return brain
 
 if __name__ == "__main__":
-    Run(0)
+    brains = []
+    for i in range(100):
+        brains.append(Next([]))
