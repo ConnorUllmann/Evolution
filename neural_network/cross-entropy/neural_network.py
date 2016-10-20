@@ -7,7 +7,7 @@ from utils import *
 from training_set import *
 from datetime import datetime, timedelta
 
-class Network():
+class NeuralNetwork():
 
     def __init__(self, sizes):
         self.layersCount = len(sizes)
@@ -15,7 +15,7 @@ class Network():
         self.biases =  [random.randn(y, 1) for y in self.sizes[1:]]
         self.weights = [random.randn(y, x) / sqrt(x) for x, y in zip(self.sizes[:-1], self.sizes[1:])]
 
-    def feedForward(self, o):
+    def forwardPropagate(self, o):
         zs = []
         os = [o]
         for b, w in zip(self.biases, self.weights):
@@ -25,8 +25,8 @@ class Network():
             os.append(o)
         return os, zs       
 
-    def backprop(self, x, y):
-        os, zs = self.feedForward(x)
+    def backPropagate(self, x, y):
+        os, zs = self.forwardPropagate(x)
         delta = os[-1] - reshape(y, (-1, 1))
         ddb = [zeros(b.shape) for b in self.biases]
         ddw = [zeros(w.shape) for w in self.weights]
@@ -41,7 +41,7 @@ class Network():
         return ddb, ddw
 
     def output(self, a, decimal=False):
-        z = reshape(self.feedForward(a)[0][-1], (1, -1))[0]
+        z = reshape(self.forwardPropagate(a)[0][-1], (1, -1))[0]
         if decimal:
             return z
         b = zeros(z.shape)
@@ -54,7 +54,7 @@ class Network():
         db = [zeros(b.shape) for b in self.biases]
         dw = [zeros(w.shape) for w in self.weights]
         for x, y in batch:
-            ddb, ddw = self.backprop(x, y)
+            ddb, ddw = self.backPropagate(x, y)
             db = [_db + _ddb for _db, _ddb in zip(db, ddb)]
             dw = [_dw + _ddw for _dw, _ddw in zip(dw, ddw)]
         self.weights = [(1 - learningRate * (regularization / nTests)) * w - (learningRate / nBatch) * nw for w, nw in zip(self.weights, dw)]
@@ -110,33 +110,3 @@ class Network():
         net.weights = [array(w) for w in data["weights"]]
         net.biases = [array(b) for b in data["biases"]]
         return net
-
-def GetTrainedNeuralNetworkForFunction(sizes, function, *args):
-    if len(sizes) < 2 or function is None:
-        return None
-
-    testProportion = 0.2 if len(args) <= 0 else args[0]
-    iterations = 10000 if len(args) <= 1 else args[1]
-    batchSize = 30 if len(args) <= 2 else args[2]
-    learningRate = 1 if len(args) <= 3 else args[3]
-    regularization = 0.0 if len(args) <= 4 else args[4]
-    
-    trainingSet = TrainingSet(sizes[0], sizes[-1], function, testProportion)
-    network = Network(sizes)
-    network.train(trainingSet.tests, iterations, batchSize, learningRate, regularization)
-    print("\n---------------------- TESTS ----------------------")
-    network.test(trainingSet.tests, "Test")
-    print("\n---------------------- EXAMS ----------------------")
-    network.test(trainingSet.exams, "Exam")
-    network.save("last-test-network.txt")
-    return network
-
-def Run(x):
-    if x == 0:
-        network = GetTrainedNeuralNetworkForFunction([6, 12, 16, 6, 1], Xor, 0.2, 10000, 8, 5, 0)
-    elif x == 1:
-        network = GetTrainedNeuralNetworkForFunction([3, 4, 2, 1], Opp)
-    else: #GOOD
-        network = GetTrainedNeuralNetworkForFunction([6, 14, 16, 14, 4], Add, 0.2, 5000, 30, 1, 0)
-
-Run(1)
