@@ -52,7 +52,7 @@ class Brain():
 
 def NextGeneration(parents):
     brain = Brain(parents)
-    brain.train(Xor, 5, 1)
+    brain.train(Add, 6, 4)
     brain.test()
     AddBrainToCheckQueue(brain)
     if len(BestScoringBrains) > 0:
@@ -66,7 +66,7 @@ def EvolveBrains():
         
 
 BestBrainsCheckQueue = []
-nBestScoringBrains = 4
+nBestScoringBrains = 10
 BestScoringBrains = []
 def AddBrainToCheckQueue(brain):
     BestBrainsCheckQueue.append(brain)
