@@ -22,14 +22,14 @@ class Genome:
     def generateDNAFromParents(self, trait, parents):
         shuffle(parents)
         DNA = []
-        for i in range(0, len(parents[0].genes[trait].DNA)):
+        for i in range(0, len(parents[0].genome.genes[trait].DNA)):
             sumValue = 0
             counted = 0
             for parent in parents:
-                if i >= 0 and i < len(parent.genes[trait].DNA):
-                    sumValue += parent.genes[trait].DNA[i]
+                if i >= 0 and i < len(parent.genome.genes[trait].DNA):
+                    sumValue += parent.genome.genes[trait].DNA[i]
                     counted += 1
-            DNA.append(0 if counted == 0 else (sumValue / counted))
+            DNA.append(0 if counted == 0 else round(sumValue / counted))
 
         return DNA
 
@@ -45,11 +45,11 @@ class Genome:
         genes = {}
         traitsDict = {}
         for parent in parents:
-            for trait in parent.genes:
+            for trait in parent.genome.genes:
                 traitsDict[trait] = True
         traits = list(traitsDict.keys())
         for trait in traits:
-            DNA = Genome.GenerateDNAFromParents(trait, parents)
+            DNA = self.generateDNAFromParents(trait, parents)
             info = self.structure[trait]
             genes[trait] = Gene(trait, DNA, info["min_length"], info["min"], info["max"], info["mutationMagnitude"])
         return genes           
@@ -90,10 +90,14 @@ class Genome:
                 diff += len(b_genes[trait].DNA)
         return same / (same + diff)
 
+    def save(self, filename):
+        with open(filename, "w") as output:
+            output.write(str(self))
+
     def __init__(self, parents, structure):
         self.structure = structure
         self.generateGenes(parents)
-        #self.mutateGenes()
+        self.mutateGenes()
 
     #def __getitem__(self, trait):
     #    return self.genes[trait]

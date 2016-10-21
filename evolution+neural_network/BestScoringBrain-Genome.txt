@@ -1,0 +1,4 @@
+hidden_layers 1 4
+learning_rate 18 37 23 71 8 34 99 58 95 59
+iterations 328 247 16 73
+batch_size 8 4 4 

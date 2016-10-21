@@ -6,7 +6,10 @@ class ThreadHandler:
         self.Reset()
 
     def AddThread(self, function, arguments=None, threadName=None):
-        thread = threading.Thread(target=function, args = arguments, threadName=threadName)
+        if arguments is None:
+            thread = Thread(target=function, name=threadName)
+        else:
+            thread = Thread(target=function, args = arguments, name=threadName)
         self.threads.append(thread)
         return thread
 

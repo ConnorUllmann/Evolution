@@ -49,31 +49,31 @@ class NeuralNetwork():
             b[i] = 1 if z[i] > 0.5 else 0
         return b
 
-    def trainWithBatch(self, batch, learningRate, regularization, nTests):
-        nBatch = len(batch)
+    def trainWithBatch(self, batch, learningRate, nTests):
         db = [zeros(b.shape) for b in self.biases]
         dw = [zeros(w.shape) for w in self.weights]
         for x, y in batch:
             ddb, ddw = self.backPropagate(x, y)
             db = [_db + _ddb for _db, _ddb in zip(db, ddb)]
             dw = [_dw + _ddw for _dw, _ddw in zip(dw, ddw)]
-        self.weights = [(1 - learningRate * (regularization / nTests)) * w - (learningRate / nBatch) * nw for w, nw in zip(self.weights, dw)]
-        self.biases =  [b - (learningRate / nBatch) * nb for b, nb in zip(self.biases, db)]
+        m = learningRate / len(batch)
+        self.weights = [w - m * nw for w, nw in zip(self.weights, dw)]
+        self.biases =  [b - m * nb for b, nb in zip(self.biases, db)]
 
-    def trainWithBatches(self, batches, learningRate, regularization, nTests):
+    def trainWithBatches(self, batches, learningRate, nTests):
         for batch in batches:
-            self.trainWithBatch(batch, learningRate, regularization, nTests) 
+            self.trainWithBatch(batch, learningRate, nTests) 
 
-    def train(self, tests, iterations, batchSize, learningRate, regularization=0):
-        print("Beginning training...")
+    def train(self, tests, iterations, batchSize, learningRate):
+        #print("Beginning training...")
         startTime = datetime.now()
         nTests = len(tests)
         for j in range(iterations):
             random.shuffle(tests)
             batches = [tests[k:k + batchSize] for k in range(0, nTests, batchSize)]
-            self.trainWithBatches(batches, learningRate, regularization, nTests)
-            if (j+1) % 1000 == 0:
-                print("Epoch {} training complete ({})".format(j+1, RemoveMilliseconds(datetime.now() - startTime)))
+            self.trainWithBatches(batches, learningRate, nTests)
+            #if (j+1) % 100 == 0:
+            #    print("Epoch {} / {} training complete ({})".format(j+1, iterations, RemoveMilliseconds(datetime.now() - startTime)))
 
     def test(self, tests, label=""):
         numberTotal = len(tests)
@@ -91,7 +91,7 @@ class NeuralNetwork():
             #print("{} {} = {} {} {} = {}".format(label, input, outputExpected, "-   -" if correct else "- @ -", output, outputDecimal))
             numberCorrect += int(correct)
         
-        print("\n{} / {} = {}%".format(numberCorrect, numberTotal, int(numberCorrect / numberTotal * 100)))
+        #print("\n{} / {} = {}%".format(numberCorrect, numberTotal, int(numberCorrect / numberTotal * 100)))
         return numberCorrect / numberTotal
     
     def save(self, filename):
