@@ -50,6 +50,13 @@ def Sigmoid(x):
 def SigmoidDerivative(x):
     return Sigmoid(x) * (1.0 - Sigmoid(x))
 
+def IsInt(x):
+    try:
+        int(x)
+        return True
+    except ValueError:
+        return False
+
 def Add(a, b):
     return [a[0] + b[0], a[1] + b[1]]
 

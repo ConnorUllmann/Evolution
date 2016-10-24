@@ -106,7 +106,7 @@ class NeuralNetwork():
         f = open(filename, "r")
         data = json.load(f)
         f.close()
-        net = Network(data["sizes"])
+        net = NeuralNetwork(data["sizes"])
         net.weights = [array(w) for w in data["weights"]]
         net.biases = [array(b) for b in data["biases"]]
         return net

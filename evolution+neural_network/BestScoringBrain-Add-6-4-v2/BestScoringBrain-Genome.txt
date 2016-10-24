@@ -1,0 +1,5 @@
+species_threshold 4 3 0
+iterations 262 122 289 213
+hidden_layers 10
+batch_size 3 6 5 3 3
+learning_rate 83 44 26 34 36 58 40 53 66 6

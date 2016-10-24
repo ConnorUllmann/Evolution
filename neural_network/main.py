@@ -31,4 +31,9 @@ def Run(x):
         network = GetTrainedNeuralNetworkForFunction([6, 14, 16, 14, 4], Add, 0.2, 5000, 30, 1, 0)
 
 if __name__ == "__main__":
-    Run(0)
+    #Run(0)
+    neuralNetwork = NeuralNetwork.Load("BestScoringBrain-NeuralNetwork 8.txt")
+    trainingSet = TrainingSet(6, 4, Add, 1)
+    neuralNetwork.test(trainingSet.exams)
+    
+    

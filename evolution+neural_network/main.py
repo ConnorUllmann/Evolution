@@ -1,73 +1,13 @@
 from neural_network import NeuralNetwork
 from training_set import TrainingSet
+from brain import Brain
 from genome import Genome
 from thread_handler import ThreadHandler
 from utils import *
-from random import choice
+from random import choice, random
 from datetime import datetime
 
-class Brain():
-
-    def sumDNAForTrait(self, trait):
-        return sum(self.genome.genes[trait].DNA)
-
-    def initializeAndTrainNeuralNetwork(self, function, nInput, nOutput):
-        layers = [nInput]
-        layers.extend(self.genome.genes["hidden_layers"].DNA)
-        layers.append(nOutput)
-        iterations = int(self.sumDNAForTrait("iterations"))
-        batchSize = int(self.sumDNAForTrait("batch_size"))
-        learningRate = self.sumDNAForTrait("learning_rate") / 1000
-
-        self.trainingSet = TrainingSet(nInput, nOutput, function, 0.25)
-        self.neuralNetwork = NeuralNetwork(layers)
-        self.neuralNetwork.train(self.trainingSet.tests, iterations, batchSize, learningRate)
-        self.neuralNetwork.test(self.trainingSet.tests, "test")
-
-    def test(self):
-        self.score = self.neuralNetwork.test(self.trainingSet.exams, "EXAM")
-
-    def initializeGenome(self, parents):
-        self.genome = Genome(parents, {
-            "hidden_layers":{"start_length":2, "min_length":0, "start_zero":False, "min":1, "max":12, "mutationMagnitude":2},
-            "iterations":{"start_length":4, "min_length":1, "start_zero":False, "min":1, "max":500, "mutationMagnitude":100},
-            "batch_size":{"start_length":4, "min_length":1, "start_zero":False, "min":1, "max":10, "mutationMagnitude":2},
-            "learning_rate":{"start_length":10, "min_length":1, "start_zero":False, "min":1, "max":100, "mutationMagnitude":50}
-            })
-        #print(self.genome)
-    
-    def __init__(self, parents):
-        self.score = None
-        self.initializeGenome(parents)
-
-    def mate(self, other):
-        return Brain([self, other])
-
-    def train(self, function, nInput, nOutput):
-        self.initializeAndTrainNeuralNetwork(function, nInput, nOutput)
-
-    def save(self, filename):
-        self.neuralNetwork.save(filename + "-NeuralNetwork.txt")
-        self.genome.save(filename + "-Genome.txt")
-
-def NextGeneration(parents):
-    brain = Brain(parents)
-    brain.train(Add, 6, 4)
-    brain.test()
-    AddBrainToCheckQueue(brain)
-    if len(BestScoringBrains) > 0:
-        return [brain, choice(BestScoringBrains)]
-    return [brain]
-
-def EvolveBrains():
-    parents = []
-    while True:
-        parents = NextGeneration(parents)
         
-
-BestBrainsCheckQueue = []
-nBestScoringBrains = 10
-BestScoringBrains = []
 def AddBrainToCheckQueue(brain):
     BestBrainsCheckQueue.append(brain)
     
@@ -79,7 +19,7 @@ def IsBestBrain(brain):
     isBestBrain = False
     inserted = False
     for i in range(len(BestScoringBrains)-1, -1, -1):
-        if brain.score > BestScoringBrains[i].score:
+        if brain.score >= BestScoringBrains[i].score:
             if i == 0:
                 BestScoringBrains.insert(0, brain)
                 isBestBrain = True
@@ -100,20 +40,73 @@ def IsBestBrain(brain):
         BestScoringBrains.pop()
     return isBestBrain
 
-def UpdateCheckQueue():
+def UpdateBestBrainCheckQueue():
     timeStart = datetime.now()
     while True:
         if len(BestBrainsCheckQueue) > 0:
             brain = BestBrainsCheckQueue.pop(0)
             if IsBestBrain(brain):
-                print("Best score: {} ({})".format(brain.score, datetime.now() - timeStart))
+                print("[{}] Best score: {}% ({})\n{}\n".format(brain.id, int(brain.score*1000)/10, datetime.now() - timeStart, brain))
                 brain.save("BestScoringBrain")
-            
 
-if __name__ == "__main__":
+def NextGeneration(parents, trainingSet):
+    brain = Brain(parents)
+    brain.trainingSet = trainingSet
+    brain.train(0.6)
+    brain.test()
+    AddBrainToCheckQueue(brain)
+    if len(BestScoringBrains) > 0:
+        index = int(random() * len(BestScoringBrains))
+        count = len(BestScoringBrains)
+        while count > 0:
+            if brain.canMate(BestScoringBrains[index]):
+                return [brain, BestScoringBrains[index]]
+            else:
+                index = (index + 1) % len(BestScoringBrains)
+                count -= 1
+    if len(BestScoringBrains) > 0:
+        brainRandom = choice(BestScoringBrains)
+        for brainTemp in BestScoringBrains:
+            if brainRandom.canMate(brainTemp):
+                return [brainRandom, brainTemp]
+    return [brain]
+
+def EvolveBrains(trainingSet):
+    parents = []
+    while True:
+        parents = NextGeneration(parents, trainingSet)
+
+def Simulate():
+    trainingSet = TrainingSet(10, 6, Add)
+    Brain.StartRecordingScores()
     threadHandler = ThreadHandler()
-    threadHandler.AddThread(UpdateCheckQueue, threadName="CheckQueue")
-    for i in range(10):
-        threadHandler.AddThread(EvolveBrains, threadName="EvolveBrains")
+    threadHandler.AddThread(UpdateBestBrainCheckQueue, threadName="BrainQueue")
+    for i in range(25):
+        threadHandler.AddThread(EvolveBrains, [trainingSet], threadName="EvolveBrains")
     print("All threads are starting...")
     threadHandler.RunAllThreads()
+
+def SimulateOneBrain():
+    trainingSet = TrainingSet(10, 6, Add)
+    Brain.StartRecordingScores()
+    threadHandler = ThreadHandler()
+    threadHandler.AddThread(UpdateBestBrainCheckQueue, threadName="BrainQueue")
+    threadHandler.RunAllThreads()
+    EvolveBrains(trainingSet)
+
+def ShowBestBrain():
+    brain = Brain.Load("BestScoringBrain")
+    print(brain)
+    trainingSet = TrainingSet(10, 6, Add)
+    brain.trainingSet = trainingSet
+    print("\nSCORE: {}%".format(int(brain.test()*1000)/10))
+
+if __name__ == "__main__":
+    BestBrainsCheckQueue = []
+    nBestScoringBrains = 10
+    BestScoringBrains = []
+
+    #Simulate()
+    SimulateOneBrain()
+    #ShowBestBrain()
+

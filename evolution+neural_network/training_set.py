@@ -1,28 +1,30 @@
 from numpy import array
-from random import shuffle
+from random import shuffle, sample
 from utils import *
 
 class TrainingSet:
-    def __init__(self, bitLengthInput, bitLengthOutput, function, testProportion=0.1):        
+    def __init__(self, nInput, nOutput, function):
+        self.nInput = nInput
+        self.nOutput = nOutput
         xBinarySet = []
         yBinarySet = []
 
-        xMax = int(pow(2, bitLengthInput))
+        xMax = int(pow(2, self.nInput))
         for x in range(0, xMax):
-            xBinaryList = Binary(x, bitLengthInput, True)
-            yBinaryList = Binary(function(*xBinaryList), bitLengthOutput, True)
+            xBinaryList = Binary(x, self.nInput, True)
+            yBinaryList = Binary(function(*xBinaryList), self.nOutput, True)
             xBinarySet.append(xBinaryList)
             yBinarySet.append(yBinaryList)
         
-        tests = []
+        self.tests = []
         for x, y in zip(array(xBinarySet), array(yBinarySet)):
-            tests.append((x, y))
+            self.tests.append((x, y))
 
-        if len(tests) <= 0:
-            self.exams = []
-            self.tests = []
-        else:
-            shuffle(tests)
-            i = max(1, int(len(tests) * testProportion))
-            self.exams = tests[:i]
-            self.tests = tests[i:]
+    def sample(self, proportion):
+        return sample(self.tests, min(max(ceil(len(self.tests) * proportion), 0), len(self.tests)))
+
+    def print(self, tests=None):
+        if tests is None:
+            tests = self.tests
+        for test in tests:
+            print("{} = {}".format(test[0], test[1]))

@@ -1,0 +1,5 @@
+learning_rate 44 55 83 51 61 44 28 71
+hidden_layers 10
+iterations 285 186 189 196 294
+batch_size 5 3
+species_threshold 44 27 2

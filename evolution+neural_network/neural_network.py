@@ -31,7 +31,7 @@ class NeuralNetwork():
         ddb = [zeros(b.shape) for b in self.biases]
         ddw = [zeros(w.shape) for w in self.weights]
         ddb[-1] = delta
-        ddw[-1] = dot(delta, os[-2].T)
+        ddw[-1] = dot(delta, reshape(os[-2].T, (1, -1)))
         for l in range(2, self.layersCount):
             z = zs[-l]
             sp = SigmoidDerivative(z)
@@ -87,27 +87,33 @@ class NeuralNetwork():
                 if int(i) != int(o):
                     correct = False
                     break
-            outputDecimal = self.output(input, True)
+            #outputDecimal = self.output(input, True)
             #print("{} {} = {} {} {} = {}".format(label, input, outputExpected, "-   -" if correct else "- @ -", output, outputDecimal))
             numberCorrect += int(correct)
         
         #print("\n{} / {} = {}%".format(numberCorrect, numberTotal, int(numberCorrect / numberTotal * 100)))
         return numberCorrect / numberTotal
+
+    def data(self):
+        return {"sizes": self.sizes,
+                "weights": [w.tolist() for w in self.weights],
+                "biases": [b.tolist() for b in self.biases]}
     
     def save(self, filename):
-        data = {"sizes": self.sizes,
-                "weights": [w.tolist() for w in self.weights],
-                "biases": [b.tolist() for b in self.biases] }
-        f = open(filename, "w")
+        data = self.data()
+        f = open(filename+".txt", "w")
         json.dump(data, f)
         f.close()
     
     @staticmethod
     def Load(filename):
-        f = open(filename, "r")
+        f = open(filename+".txt", "r")
         data = json.load(f)
         f.close()
-        net = Network(data["sizes"])
+        net = NeuralNetwork(data["sizes"])
         net.weights = [array(w) for w in data["weights"]]
         net.biases = [array(b) for b in data["biases"]]
         return net
+
+    def __str__(self):
+        return str(self.data())
