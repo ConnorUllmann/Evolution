@@ -123,7 +123,7 @@ class Genome:
             self.genes = genes
         else:
             self.generateGenes(parents)
-        self.mutateGenes()
+            self.mutateGenes()
 
     #def __getitem__(self, trait):
     #    return self.genes[trait]

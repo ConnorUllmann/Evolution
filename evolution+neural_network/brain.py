@@ -37,43 +37,50 @@ class Brain():
         try:
             if len(Brain.Scores) > 0:
                 with open("BestScoringBrain-Scores.txt", "a") as output:
-                    while len(Brain.Scores) > 0:
-                        output.write("{}\n".format(Brain.Scores.pop(0)))
+                    for score in Brain.Scores:
+                        output.write("{}\n".format(score))
+                    Brain.Scores = []
         finally:
             Brain.ScoresLock.release()
 
     def sumDNAForTrait(self, trait):
         return sum(self.genome.genes[trait])
 
-    def train(self, testProportion):
-        nInput = self.trainingSet.nInput
-        nOutput = self.trainingSet.nOutput
-        layers = [nInput]
-        layers.extend(self.genome.genes["hidden_layers"])
-        layers.append(nOutput)
+    def train(self, testProportion, trainingSet=None):
+        if trainingSet is not None:
+            self.trainingSet = trainingSet
+        #print("[{}] layers = {}, iterations = {}, learning rate = {}, species threshold = {}".format(self.id, layers[1:-1], iterations, learningRate, self.speciesThreshold))
+        if self.neuralNetwork is None:
+            nInput = self.trainingSet.nInput
+            nOutput = self.trainingSet.nOutput
+            layers = [nInput]
+            layers.extend(self.genome.genes["hidden_layers"])
+            layers.append(nOutput)
+            self.neuralNetwork = NeuralNetwork(layers)
+
         iterations = int(self.sumDNAForTrait("iterations"))
         batchSize = int(self.sumDNAForTrait("batch_size"))
         learningRate = self.sumDNAForTrait("learning_rate") / 1000
 
-        #print("[{}] layers = {}, iterations = {}, learning rate = {}, species threshold = {}".format(self.id, layers[1:-1], iterations, learningRate, self.speciesThreshold))
-        self.neuralNetwork = NeuralNetwork(layers)
-        self.neuralNetwork.train(self.trainingSet.sample(testProportion), iterations, batchSize, learningRate)
+        testSample = self.trainingSet.sample(testProportion)
+        self.neuralNetwork.train(testSample, iterations, batchSize, learningRate)
 
     def test(self):
         self.score = self.neuralNetwork.test(self.trainingSet.tests, "ALL")
         Brain.Scores.append(self.score)
-        if len(Brain.Scores) > 10:
+        if len(Brain.Scores) >= 10:
             Brain.FlushScores()
         print("[{}] = {}%".format(self.id, int(self.score*1000)/10))
+        #print("Brain:\n{}".format(self))
         return self.score
 
     def initializeGenome(self, parents):
         self.genome = Genome({
-            "hidden_layers":{"start_length":[1, 4], "min_length":1, "start_zero":False, "min":1, "max":12, "mutationMagnitude":3},
-            "iterations":{"start_length":[1, 10], "min_length":1, "start_zero":False, "min":1, "max":200, "mutationMagnitude":100},
-            "batch_size":{"start_length":4, "min_length":1, "start_zero":False, "min":1, "max":10, "mutationMagnitude":2},
-            "learning_rate":{"start_length":10, "min_length":1, "start_zero":False, "min":1, "max":100, "mutationMagnitude":50},
-            "species_threshold":{"start_length":4, "min_length":1, "start_zero":True, "min":0, "max":100, "mutationMagnitude":20}
+            "hidden_layers":{"start_length":[1, 4], "min_length":1, "start_zero":False, "min":1, "max":20, "mutationMagnitude":3},
+            "iterations":{"start_length":[4, 10], "min_length":1, "start_zero":False, "min":1, "max":250, "mutationMagnitude":100},
+            "batch_size":{"start_length":[1, 4], "min_length":1, "start_zero":False, "min":1, "max":10, "mutationMagnitude":2},
+            "learning_rate":{"start_length":[1, 10], "min_length":1, "start_zero":False, "min":1, "max":100, "mutationMagnitude":50},
+            "species_threshold":{"start_length":[1, 4], "min_length":1, "start_zero":True, "min":0, "max":100, "mutationMagnitude":20}
             }, parents=parents)
     
     def __init__(self, parents=None, neuralNetwork=None, genome=None):
@@ -89,8 +96,8 @@ class Brain():
     def canMate(self, other):
         if self == other:
             return False
-        x = self.genome.compare(other.genome)
-        return self.speciesThreshold <= x < 1
+        #x = self.genome.compare(other.genome)
+        return True #self.speciesThreshold <= x < 1
 
     def mate(self, other):
         if self.canMate(other):

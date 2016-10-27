@@ -1,0 +1,1 @@
+{"hidden_layers": [12], "iterations": [192, 130, 164, 200], "batch_size": [4, 6, 4], "species_threshold": [0, 8, 32, 2], "learning_rate": [80, 49, 52, 46, 94, 89, 78, 12, 32]}

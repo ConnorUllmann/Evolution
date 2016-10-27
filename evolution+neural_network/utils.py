@@ -48,7 +48,8 @@ def Sigmoid(x):
 # This is the gradient of the Sigmoid curve.
 # It indicates how confident we are about the existing weight.
 def SigmoidDerivative(x):
-    return Sigmoid(x) * (1.0 - Sigmoid(x))
+    sx = Sigmoid(x)
+    return sx * (1.0 - sx)
 
 def IsInt(x):
     try:

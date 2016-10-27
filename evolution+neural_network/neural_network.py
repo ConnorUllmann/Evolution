@@ -69,29 +69,26 @@ class NeuralNetwork():
         startTime = datetime.now()
         nTests = len(tests)
         for j in range(iterations):
-            random.shuffle(tests)
+            #random.shuffle(tests)
             batches = [tests[k:k + batchSize] for k in range(0, nTests, batchSize)]
             self.trainWithBatches(batches, learningRate, nTests)
-            #if (j+1) % 100 == 0:
-            #    print("Epoch {} / {} training complete ({})".format(j+1, iterations, RemoveMilliseconds(datetime.now() - startTime)))
+            if (j+1) % 100 == 0:
+                print("Epoch {} / {} training complete ({})".format(j+1, iterations, RemoveMilliseconds(datetime.now() - startTime)))
 
     def test(self, tests, label=""):
         numberTotal = len(tests)
         numberCorrect = 0
         for test in tests:
-            input = test[0]
-            output = self.output(input)
-            outputExpected = test[1]
             correct = True
-            for i, o in zip(outputExpected, output):
+            for i, o in zip(test[1], self.output(test[0])):
                 if int(i) != int(o):
                     correct = False
                     break
-            #outputDecimal = self.output(input, True)
-            #print("{} {} = {} {} {} = {}".format(label, input, outputExpected, "-   -" if correct else "- @ -", output, outputDecimal))
+            outputDecimal = self.output(test[0], True)
+            #print("{} {} = {} {} {} = {}".format(label, test[0], test[1], "-   -" if correct else "- @ -", self.output(test[0]), outputDecimal))
             numberCorrect += int(correct)
         
-        #print("\n{} / {} = {}%".format(numberCorrect, numberTotal, int(numberCorrect / numberTotal * 100)))
+        print("\n{} / {} = {}%".format(numberCorrect, numberTotal, int(numberCorrect / numberTotal * 1000)/10))
         return numberCorrect / numberTotal
 
     def data(self):

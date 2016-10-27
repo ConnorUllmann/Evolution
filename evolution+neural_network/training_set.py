@@ -9,7 +9,7 @@ class TrainingSet:
         xBinarySet = []
         yBinarySet = []
 
-        xMax = int(pow(2, self.nInput))
+        xMax = int(2**self.nInput)
         for x in range(0, xMax):
             xBinaryList = Binary(x, self.nInput, True)
             yBinaryList = Binary(function(*xBinaryList), self.nOutput, True)
