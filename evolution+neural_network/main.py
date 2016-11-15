@@ -5,6 +5,8 @@ from utils import *
 from random import choice, random
 from datetime import datetime
 
+from body import Body
+from screen import Screen
 from neural_network import NeuralNetwork
 
         
@@ -79,12 +81,12 @@ def EvolveBrains(trainingSet):
 def ShowBestBrain():
     brain = Brain.Load("BestScoringBrain")
     print(brain)
-    trainingSet = TrainingSet(10, 6, Add)
+    trainingSet = TrainingSet(10, 1, Opp)
     brain.trainingSet = trainingSet
     print("\nSCORE: {}%".format(int(brain.test()*1000)/10))
 
 def Simulate():
-    trainingSet = TrainingSet(12, 7, Add)
+    trainingSet = TrainingSet(6, 4, Add)
     Brain.StartRecordingScores()
     threadHandler = ThreadHandler()
     threadHandler.AddThread(UpdateBestBrainCheckQueue, threadName="BrainQueue")
@@ -102,29 +104,36 @@ def SimulateOneBrain():
     EvolveBrains(trainingSet)
 
 def Run():
+    screen = Screen(600, 400)
+    screen.Start()
+    
     Brain.StartRecordingScores()
-    trainingSet = TrainingSet(16, 9, Add)
-    brain = Brain([], neuralNetwork=NeuralNetwork([16, 24, 9]))
+    trainingSet = TrainingSet(6, 4, Add)
+    brain = Brain([], neuralNetwork=NeuralNetwork([6, 4, 4, 4]))
     brain.trainingSet = trainingSet
-    print(brain)
-    print("-------------")
+    body = Body(brain, 50, 200, 300, 500)
+    brain.genome.genes["iterations"] = [10]
+    brain.genome.genes["batch_size"] = [10000]
     while True:
         brain.test()
         brain.neuralNetwork.save("BestScoringBrain-NeuralNetwork")
         with open("BestScoringBrain-Scores.txt", "a") as output:
             output.write("{}\n".format(brain.score))
         if brain.score >= 1:
+            print("Done!")
             break
-        brain.train(0.25)
+        brain.train(1)
 
 if __name__ == "__main__":
     BestBrainsCheckQueue = []
     nBestScoringBrains = 5
     BestScoringBrains = []
 
-    Run()
+    #Run()
 
     #Simulate()
+    Run()
+    
     #SimulateOneBrain()
     #ShowBestBrain()
 

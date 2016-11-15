@@ -72,8 +72,8 @@ class NeuralNetwork():
             #random.shuffle(tests)
             batches = [tests[k:k + batchSize] for k in range(0, nTests, batchSize)]
             self.trainWithBatches(batches, learningRate, nTests)
-            if (j+1) % 100 == 0:
-                print("Epoch {} / {} training complete ({})".format(j+1, iterations, RemoveMilliseconds(datetime.now() - startTime)))
+            #if (j+1) % 100 == 0:
+            #    print("Epoch {} / {} training complete ({})".format(j+1, iterations, RemoveMilliseconds(datetime.now() - startTime)))
 
     def test(self, tests, label=""):
         numberTotal = len(tests)
@@ -88,7 +88,7 @@ class NeuralNetwork():
             #print("{} {} = {} {} {} = {}".format(label, test[0], test[1], "-   -" if correct else "- @ -", self.output(test[0]), outputDecimal))
             numberCorrect += int(correct)
         
-        print("\n{} / {} = {}%".format(numberCorrect, numberTotal, int(numberCorrect / numberTotal * 1000)/10))
+        #print("\n{} / {} = {}%".format(numberCorrect, numberTotal, int(numberCorrect / numberTotal * 1000)/10))
         return numberCorrect / numberTotal
 
     def data(self):

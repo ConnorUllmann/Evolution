@@ -61,6 +61,7 @@ class Brain():
         iterations = int(self.sumDNAForTrait("iterations"))
         batchSize = int(self.sumDNAForTrait("batch_size"))
         learningRate = self.sumDNAForTrait("learning_rate") / 1000
+        #print("{} {} {}".format(iterations, batchSize, learningRate))
 
         testSample = self.trainingSet.sample(testProportion)
         self.neuralNetwork.train(testSample, iterations, batchSize, learningRate)
