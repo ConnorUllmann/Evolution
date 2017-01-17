@@ -104,14 +104,16 @@ def SimulateOneBrain():
     EvolveBrains(trainingSet)
 
 def Run():
-    screen = Screen(600, 400)
+    screen = Screen(1600, 1000)
     screen.Start()
     
     Brain.StartRecordingScores()
     trainingSet = TrainingSet(6, 4, Add)
-    brain = Brain([], neuralNetwork=NeuralNetwork([6, 4, 4, 4]))
+    brain = Brain([], neuralNetwork=NeuralNetwork([6, 8, 4]))
     brain.trainingSet = trainingSet
-    body = Body(brain, 50, 200, 300, 500)
+
+    m = 50
+    body = Body(brain, m, screen.height / 2, screen.height - m * 2, screen.width - m * 2)
     brain.genome.genes["iterations"] = [10]
     brain.genome.genes["batch_size"] = [10000]
     while True:
@@ -122,7 +124,7 @@ def Run():
         if brain.score >= 1:
             print("Done!")
             break
-        brain.train(1)
+        brain.train(0.5)
 
 if __name__ == "__main__":
     BestBrainsCheckQueue = []
