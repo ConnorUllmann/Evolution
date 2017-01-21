@@ -47,3 +47,16 @@ class Player(Gladiator):
             self.v.y -= 5
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.v.y += 5
+
+class AI(Gladiator):
+
+    def __init__(self, x, y):
+        Gladiator.__init__(self, x, y)
+        self.color = (255, 0, 0)
+        
+        self.v.x = 5
+        self.v.y = 0
+
+    def UpdateVelocity(self):
+        self.v.degrees += 10
+    

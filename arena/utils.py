@@ -96,9 +96,22 @@ class Point:
     def radians(self):
         return atan2(self.y, self.x)
 
+    @radians.setter
+    def radians(self, radians):
+        l = self.length
+        self.x = l * cos(radians)
+        self.y = l * sin(radians)
+
     @property
     def degrees(self):
         return self.radians / Point.deg2rad
+
+    @degrees.setter
+    def degrees(self, degrees):
+        l = self.length
+        a = degrees * Point.deg2rad
+        self.x = l * cos(a)
+        self.y = l * sin(a)
 
     def rotate(self, amount, degrees=False, center=None):
         if center is not None:

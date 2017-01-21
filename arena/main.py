@@ -1,13 +1,13 @@
 from screen import Screen
-from gladiator import Gladiator, Player
+from gladiator import AI, Player
 import pygame, random, math
 
 def PreGame():
     global player
     pygame.display.set_caption("Arena")
     player = Player(200, 200)
-    Gladiator(500, 100)
-    Gladiator(400, 300)
+    AI(500, 100)
+    AI(400, 300)
 
 def UpdateGame():
     global player
