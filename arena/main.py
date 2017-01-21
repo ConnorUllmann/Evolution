@@ -3,11 +3,14 @@ from gladiator import Gladiator, Player
 import pygame, random, math
 
 def PreGame():
+    global player
     pygame.display.set_caption("Arena")
-    Player(200, 200)
+    player = Player(200, 200)
+    Gladiator(500, 100)
     Gladiator(400, 300)
 
 def UpdateGame():
+    global player
     pygame.event.poll()
     pass
 
