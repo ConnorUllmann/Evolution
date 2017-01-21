@@ -113,17 +113,18 @@ class Point:
         self.x = l * cos(a)
         self.y = l * sin(a)
 
-    def rotate(self, amount, degrees=False, center=None):
+    def rotateRadians(self, radians, center=None):
         if center is not None:
             self.x -= center.x
             self.y -= center.y
-        l = self.length
-        a = self.radians + (amount * Point.deg2rad if degrees else amount)
-        self.x = l * cos(a)
-        self.y = l * sin(a)
+        self.radians += radians
         if center is not None:
             self.x += center.x
             self.y += center.y
+        return self
+
+    def rotateDegrees(self, degrees, center=None):
+        return self.rotateRad(degrees * Point.deg2rad, center)
 
     def distanceTo(self, other):
         return (self - other).length
