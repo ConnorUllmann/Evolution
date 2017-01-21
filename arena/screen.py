@@ -2,6 +2,7 @@ import pygame, time, os, platform
 from tkinter import *
 from random import randint
 from thread_manager import ThreadManager
+from point import Point
 
 def RandomColor():
     return (randint(0, 255), randint(0, 255), randint(0, 255))
@@ -94,7 +95,7 @@ class Screen:
         pygame.display.update()
         self.ClearScreen()
 
-        self.camera = [0, 0]
+        self.camera = Point()
 
         #self.embed = self.Frame()
         #os.environ['SDL_WINDOWID'] = str(self.embed.winfo_id())
@@ -151,8 +152,8 @@ class Screen:
     @staticmethod
     def DrawRect(position, size, color=(255, 255, 255), thickness=1, filled=True):
         if filled:
-            x = position[0] - Screen.Instance.camera[0]
-            y = position[1] - Screen.Instance.camera[1]
+            x = position[0] - Screen.Instance.camera.x
+            y = position[1] - Screen.Instance.camera.y
             sx = size[0]
             sy = size[1]
             if x < 0:
@@ -164,37 +165,37 @@ class Screen:
                 y = min(max(y, 0), Screen.Instance.height)
                 Screen.Instance.screen.fill(color, (x, y, sx, sy))
         else:
-            pygame.draw.rect(Screen.Instance.screen, color, pygame.Rect(position[0] - Screen.Instance.camera[0], position[1] - Screen.Instance.camera[1], size[0], size[1]), thickness)
+            pygame.draw.rect(Screen.Instance.screen, color, pygame.Rect(position[0] - Screen.Instance.camera.x, position[1] - Screen.Instance.camera.y, size[0], size[1]), thickness)
 
     @staticmethod
     def DrawLines(positions, color=(255, 255, 255), thickness=1):
-        if camera[0] != 0 and camera[1] != 0:
+        if camera.x != 0 and camera.y != 0:
             p = []
             for x in positions:
-                p.append((x[0] - Screen.Instance.camera[0], x[1] - Screen.Instance.camera[1]))
+                p.append((x[0] - Screen.Instance.camera.x, x[1] - Screen.Instance.camera.y))
             pygame.draw.lines(Screen.Instance.screen, color, False, p, thickness)
         else:
             pygame.draw.lines(Screen.Instance.screen, color, False, positions, thickness)
 
     @staticmethod
     def DrawLine(positionStart=(0,0), positionEnd=(0,0), color=(255,255,255), thickness=1):
-        pS = (positionStart[0] - Screen.Instance.camera[0], positionStart[1] - Screen.Instance.camera[1])
-        pE = (positionEnd[0] - Screen.Instance.camera[0], positionEnd[1] - Screen.Instance.camera[1])
+        pS = (positionStart[0] - Screen.Instance.camera.x, positionStart[1] - Screen.Instance.camera.y)
+        pE = (positionEnd[0] - Screen.Instance.camera.x, positionEnd[1] - Screen.Instance.camera.y)
         pygame.draw.line(Screen.Instance.screen, color, pS, pE, thickness)
         
     @staticmethod
     def DrawCircle(position=(0,0), radius=1, color=(255,255,255), thickness=0):
-        intPosition = (int(position[0] - Screen.Instance.camera[0]), int(position[1] - Screen.Instance.camera[1]))
+        intPosition = (int(position[0] - Screen.Instance.camera.x), int(position[1] - Screen.Instance.camera.y))
         pygame.draw.circle(Screen.Instance.screen, color, intPosition, int(radius), thickness)
 
     @staticmethod
     def DrawPoint(position=(0,0), color=(255,255,255)):
-        intPosition = (int(position[0] - Screen.Instance.camera[0]), int(position[1] - Screen.Instance.camera[1]))
+        intPosition = (int(position[0] - Screen.Instance.camera.x), int(position[1] - Screen.Instance.camera.y))
         Screen.Instance.screen.set_at(intPosition, color)
 
     @staticmethod
     def DrawText(position=(0,0), text="", color=(255,255,255), fontSize=12):
-        intPosition = (int(position[0] - Screen.Instance.camera[0]), int(position[1] - Screen.Instance.camera[1]))
+        intPosition = (int(position[0] - Screen.Instance.camera.x), int(position[1] - Screen.Instance.camera.y))
         font = pygame.font.Font(None, fontSize)
         textRendered = font.render(text, 1, color)
         Screen.Instance.screen.blit(textRendered, intPosition)

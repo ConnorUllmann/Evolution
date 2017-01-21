@@ -2,19 +2,20 @@ from screen import Screen
 from player import Player
 from wall import Wall
 import pygame, random, math
+from point import Point
 
 wallWidth = 32
 gap = 30
 gapY = 200
 screenSpeed = 6
-camera = (0, 0)
+camera = Point(0, 0)
 wallMaxX = 0
 
 def PreGame():
     global player, wallWidth
     pygame.display.set_caption("Helicopter")
     player = Player(200, gapY)
-    player.v[0] = screenSpeed
+    player.v.x = screenSpeed
     pass
 
 def UpdateGame():
@@ -34,20 +35,20 @@ def UpdateGame():
             
         wallMaxX = newWallMaxX
 
-    Screen.Instance.camera[0] = player.x - cameraLeftMargin
-    Screen.Instance.camera[1] = 0
+    Screen.Instance.camera.x = player.x - cameraLeftMargin
+    Screen.Instance.camera.y = 0
 
     for event in pygame.event.get():
         if (event.type == pygame.KEYDOWN and event.key == pygame.K_b):
             player.y = gapY
-            player.v[1] = 0
+            player.v.y = 0
     pygame.event.poll()
     
     walls = []
     for wall in Wall.walls:
         walls.append(wall)
     for wall in walls:
-        if wall.x - Screen.Instance.camera[0] < -wallWidth:
+        if wall.x - Screen.Instance.camera.x < -wallWidth:
             wall.Destroy()
     pass
 

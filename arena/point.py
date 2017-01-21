@@ -28,6 +28,9 @@ class Point:
     def proj(self, other):
         return self.dot(other) / other.lengthSq * other
 
+    def distanceTo(self, other):
+        return (self - other).length
+
     def __abs__(self):
         return Point(abs(self.x), abs(self.y))
 
@@ -65,6 +68,8 @@ class Point:
         return "({}, {})".format(self.x, self.y)
 
     def __eq__(self, other):
+        if other is None:
+            return self is None
         return self.x == other.x and self.y == other.y
 
     def __ne__(self, other):

@@ -3,20 +3,20 @@ from wall import Wall
 import pygame
 from utils import *
 import math
+from point import Point
 from neural_network import NeuralNetwork
 
 def inRange(x, _min, _max):
     return x >= _min and x <= _max
 
-class Player:
+class Player(Point):
     players = []
 
     def __init__(self, x, y):
+        Point.__init__(self, x, y)
         self.color = (255, 255, 255)
         self.radius = 12
-        self.x = x
-        self.y = y
-        self.v = [0, 0]
+        self.v = Point()
         
         self.destroyed = False
         Screen.Instance.AddUpdateFunction(self, self.Update)
@@ -44,17 +44,17 @@ class Player:
             vy = -0.5
             neuralOutputs[0] = 1
 
-        neuralInputs = [self.v[0], self.v[1]]
+        neuralInputs = [self.v.x, self.v.y]
         lines = 10
         for x in range(lines):
             a = (x+1) / (lines+1) * math.pi - math.pi / 2
             length = 1000
-            m = (self.x, self.y)
-            n = (self.x + math.cos(a) * length, self.y + math.sin(a) * length)
+            m = Point(self.x, self.y)
+            n = Point(self.x + math.cos(a) * length, self.y + math.sin(a) * length)
             p = Player.LineCollidesWall(m, n)
             if p != None:
                 n = p
-            d = Distance(m, n) / length
+            d = m.distanceTo(n) / length
             neuralInputs.append(d)
 
         if self.writingNeuralNetwork:
@@ -87,10 +87,10 @@ class Player:
             if outputs[0] == 1:
                 vy = -0.5
         
-        self.v[1] += vy
+        self.v.y += vy
         
-        self.x += self.v[0]
-        self.y += self.v[1]
+        self.x += self.v.x
+        self.y += self.v.y
 
         self.y = min(max(self.y, 0), Screen.Instance.height)
 
@@ -107,7 +107,7 @@ class Player:
         pass
 
     def Render(self):
-        Screen.DrawCircle((self.x, self.y), self.radius, self.color)
+        Screen.DrawCircle(self, self.radius, self.color)
         pass
 
     @staticmethod

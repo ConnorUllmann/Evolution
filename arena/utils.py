@@ -1,6 +1,7 @@
 from math import *
 from numpy import exp
 from datetime import timedelta
+from point import Point
 
 def RemoveMilliseconds(delta):
     return delta - timedelta(microseconds=delta.microseconds)
@@ -126,7 +127,7 @@ def LinesIntersectionPoint(A, B, E, F, as_seg = True):
     denom = a1*b2 - a2*b1
     if denom == 0:
             return None
-    ip = ((b1*c2 - b2*c1)/denom, (a2*c1 - a1*c2)/denom)
+    ip = Point((b1*c2 - b2*c1)/denom, (a2*c1 - a1*c2)/denom)
     
     if as_seg:
         if (ip[0] - B[0])**2 + (ip[1] - B[1])**2 > (A[0] - B[0])**2 + (A[1] - B[1])**2 or \
