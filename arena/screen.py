@@ -169,7 +169,7 @@ class Screen:
 
     @staticmethod
     def DrawLines(positions, color=(255, 255, 255), thickness=1):
-        if camera.x != 0 and camera.y != 0:
+        if camera.x != 0 or camera.y != 0:
             p = []
             for x in positions:
                 p.append((x[0] - Screen.Instance.camera.x, x[1] - Screen.Instance.camera.y))

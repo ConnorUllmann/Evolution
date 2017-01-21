@@ -60,6 +60,8 @@ def IsInt(x):
 
 class Point:
 
+    deg2rad = pi / 180
+
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
@@ -85,6 +87,30 @@ class Point:
 
     def proj(self, other):
         return self.dot(other) / other.lengthSq * other
+
+    def reflect(self, normal):
+        n = Point(normal.y, -normal.x)
+        return self - 2 * self.dot(n) / n.lengthSq * n
+
+    @property
+    def radians(self):
+        return atan2(self.y, self.x)
+
+    @property
+    def degrees(self):
+        return self.radians / Point.deg2rad
+
+    def rotate(self, amount, degrees=False, center=None):
+        if center is not None:
+            self.x -= center.x
+            self.y -= center.y
+        l = self.length
+        a = self.radians + (amount * Point.deg2rad if degrees else amount)
+        self.x = l * cos(a)
+        self.y = l * sin(a)
+        if center is not None:
+            self.x += center.x
+            self.y += center.y
 
     def distanceTo(self, other):
         return (self - other).length
