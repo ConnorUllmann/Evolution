@@ -2,7 +2,7 @@ import pygame, time, os, platform
 from tkinter import *
 from random import randint
 from thread_manager import ThreadManager
-from point import Point
+from utils import Point
 
 def RandomColor():
     return (randint(0, 255), randint(0, 255), randint(0, 255))

@@ -3,7 +3,7 @@ from wall import Wall
 import pygame
 from utils import *
 import math
-from point import Point
+from utils import Point
 from neural_network import NeuralNetwork
 
 def inRange(x, _min, _max):

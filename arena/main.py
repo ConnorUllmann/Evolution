@@ -2,7 +2,7 @@ from screen import Screen
 from player import Player
 from wall import Wall
 import pygame, random, math
-from point import Point
+from utils import Point
 
 wallWidth = 32
 gap = 30

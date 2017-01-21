@@ -1,7 +1,6 @@
 from math import *
 from numpy import exp
 from datetime import timedelta
-from point import Point
 
 def RemoveMilliseconds(delta):
     return delta - timedelta(microseconds=delta.microseconds)
@@ -58,6 +57,111 @@ def IsInt(x):
         return True
     except ValueError:
         return False
+
+class Point:
+
+    def __init__(self, x=0, y=0):
+        self.x = x
+        self.y = y
+
+    @property
+    def normalized(self):
+        l = self.length
+        return Point(self.x / l, self.y / l)
+
+    @property
+    def lengthSq(self):
+        return self.x**2 + self.y**2
+
+    @property
+    def length(self):
+        return sqrt(self.lengthSq)
+
+    def dot(self, other):
+        return self.x * other.x + self.y * other.y
+
+    def cross(self, other):
+        return self.x * other.y - self.y * other.x
+
+    def proj(self, other):
+        return self.dot(other) / other.lengthSq * other
+
+    def distanceTo(self, other):
+        return (self - other).length
+
+    def __abs__(self):
+        return Point(abs(self.x), abs(self.y))
+
+    def __add__(self, other):
+        return Point(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return Point(self.x - other.x, self.y - other.y)
+
+    def __mul__(self, other):
+        if isinstance(other, self.__class__):
+            return Point(self.x * other.x, self.y * other.y)
+        else:
+            return Point(self.x * other, self.y * other)
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __truediv__(self, other):
+        if isinstance(other, self.__class__):
+            return Point(self.x / other.x, self.y / other.y)
+        else:
+            return Point(self.x / other, self.y / other)
+
+    def __rtruediv__(self, other):
+        if isinstance(other, self.__class__):
+            return Point(other.x / self.x, other.y / self.y)
+        else:
+            return Point(other / self.x, other / self.y)
+
+    def __neg__(self):
+        return Point(-self.x, -self.y)
+
+    def __str__(self):
+        return "({}, {})".format(self.x, self.y)
+
+    def __eq__(self, other):
+        if other is None:
+            return self is None
+        return self.x == other.x and self.y == other.y
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __getitem__(self, index):
+        if index == 0:
+            return self.x
+        elif index == 1:
+            return self.y
+        return None
+
+    def __setitem__(self, index, value):
+        if index == 0:
+            self.x = value
+        elif index == 1:
+            self.y = value
+
+##class _Animal():
+##
+##    def __init__(self, name):
+##        self.name = name
+##
+##    def __str__(self):
+##        return "[{}]".format(self.name)
+##
+##class _Creature(Animal, Point):
+##
+##    def __init__(self, name, x, y):
+##        Animal.__init__(self, name)
+##        Point.__init__(self, x, y)
+##
+##    def __str__(self):
+##        return "{} {}".format(Animal.__str__(self), Point.__str__(self))
 
 def Add(a, b):
     return [a[0] + b[0], a[1] + b[1]]
