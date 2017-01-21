@@ -1,11 +1,11 @@
 from screen import Screen
-from player import Player
+from gladiator import Gladiator, Player
 import pygame, random, math
 
 def PreGame():
     pygame.display.set_caption("Arena")
     Player(200, 200)
-    Player(400, 300)
+    Gladiator(400, 300)
 
 def UpdateGame():
     pygame.event.poll()

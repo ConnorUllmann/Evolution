@@ -153,7 +153,7 @@ class Point:
 
     def __eq__(self, other):
         if other is None:
-            return self is None
+            return False
         return self.x == other.x and self.y == other.y
 
     def __ne__(self, other):
