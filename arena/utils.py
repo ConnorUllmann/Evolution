@@ -124,7 +124,7 @@ class Point:
         return self
 
     def rotateDegrees(self, degrees, center=None):
-        return self.rotateRad(degrees * Point.deg2rad, center)
+        return self.rotateRadians(degrees * Point.deg2rad, center)
 
     def distanceTo(self, other):
         return (self - other).length
@@ -280,6 +280,50 @@ def LinesIntersectionPoint(A, B, E, F, as_seg = True):
            (ip[0] - E[0])**2 + (ip[1] - E[1])**2 > (E[0] - F[0])**2 + (E[1] - F[1])**2:
            return None
     return ip
+
+def ColinearPointInsideLineSegment(pos, lineA, lineB):
+    v = (pos - lineA).dot(lineB - lineA)
+    return v >= 0 and v <= (lineB - lineA).lengthSq
+
+def CircleLineCollide(center, radius, lineA, lineB, asSegment=True):
+    ret = []
+    if abs(lineA.x - lineB.x) < 0.00001:
+        x0 = x1 = lineA.x
+        d = radius**2 - (x0 - center.x)**2
+        if d < 0:
+            return ret
+        d = sqrt(d)
+        y0 = center.y + d
+        u = Point(x0, y0)
+        if not asSegment or ColinearPointInsideLineSegment(u, lineA, lineB):
+            ret.append(u)
+        if d == 0:
+            return ret
+        y1 = center.y - d
+        v = Point(x1, y1)
+        if not asSegment or ColinearPointInsideLineSegment(v, lineA, lineB):
+            ret.append(v)
+        return ret
+    m = (lineB.y - lineA.y) / (lineB.x - lineA.x)
+    a = m**2 + 1
+    b = -2 * m**2 * lineA.x + 2 * m * lineA.y - 2 * m * center.y - 2 * center.x
+    c = m**2 * lineA.x**2 - 2 * m * lineA.x * lineA.y + 2 * m * center.y * lineA.x + lineA.y**2 - 2 * center.y * lineA.y + center.y**2 - radius**2 + center.x**2
+    d = b**2 - 4 * a * c
+    if d < 0:
+        return ret
+    x0 = (-b + sqrt(d)) / (2 * a)
+    y0 = lineA.y + m * (x0 - lineA.x)
+    u = Point(x0, y0)
+    if not asSegment or ColinearPointInsideLineSegment(u, lineA, lineB):
+        ret.append(u)
+    if d == 0:
+        return ret
+    x1 = (-b - sqrt(d)) / (2 * a)
+    y1 = lineA.y + m * (x1 - lineA.x)
+    v = Point(x1, y1)
+    if not asSegment or ColinearPointInsideLineSegment(v, lineA, lineB):
+        ret.append(v)
+    return ret
 
 def Torque(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])

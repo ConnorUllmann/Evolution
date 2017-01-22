@@ -14,12 +14,15 @@ class Entity(StateMachine, Point):
         return _id
 
     @staticmethod
-    def GetAllEntitiesOfSameType(entity):
-        name = entity.__class__.__name__
+    def GetAllEntitiesOfType(name):
         if name in Entity.entities:
             return list(Entity.entities[name])
         else:
             return []
+
+    @staticmethod
+    def GetAllEntitiesOfSameType(entity):
+        return Entity.GetAllEntitiesOfType(entity.__class__.__name__)
 
     @staticmethod
     def Add(entity):

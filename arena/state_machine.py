@@ -64,6 +64,10 @@ class StateMachine:
         self.currStateName = None
         self.nextStateName = None
 
+    @property
+    def state(self):
+        return self.currStateName
+
 # -------------------- STATE MACHINE TESTING -------------------- 
 
 class _StateMachineTestObject:
