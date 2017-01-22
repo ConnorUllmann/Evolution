@@ -1,16 +1,16 @@
 class _State:
 
     @staticmethod
-    def CarefulExecute(func):
+    def CarefulExecute(func, *args):
         if func is not None:
-            return func()
+            return func(*args)
         return None
 
     def update(self):
         return _State.CarefulExecute(self.updateCallback)
 
-    def begin(self):
-        return _State.CarefulExecute(self.beginCallback)
+    def begin(self, *args):
+        return _State.CarefulExecute(self.beginCallback, *args)
 
     def end(self):
         return _State.CarefulExecute(self.endCallback)
@@ -39,9 +39,10 @@ class StateMachine:
         self.states[stateName] = _State(stateName, stateUpdateCallback, stateBeginCallback, stateEndCallback)
         return True
 
-    def SetState(self, nextStateName):
+    def SetState(self, nextStateName, *args):
         if self.StateExists(nextStateName):
             self.nextStateName = nextStateName
+            self.nextStateBeginArgs = args
             return True
         return False
 
@@ -53,7 +54,7 @@ class StateMachine:
             if self.lastStateName is not None:
                 self.states[self.lastStateName].end()
             if self.currStateName is not None:
-                self.states[self.currStateName].begin()
+                self.states[self.currStateName].begin(*self.nextStateBeginArgs)
         
         if self.currStateName is not None:
             self.states[self.currStateName].update()
@@ -93,8 +94,8 @@ class _StateMachineTestObject:
         print("Updating State Machine... age: {}".format(self.age))
         self.sm.Update()
 
-    def ActiveBegin(self):
-        print("Begin - Active")
+    def ActiveBegin(self, phrase=""):
+        print("Begin - Active + Phrase: {}".format(phrase))
 
     def ActiveEnd(self):
         print("End - Active")
