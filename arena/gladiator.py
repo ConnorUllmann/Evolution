@@ -1,10 +1,5 @@
-from screen import Screen
-import pygame
-from utils import *
-import math
-from entity import Entity
-from neural_network import NeuralNetwork
-import os
+from basics import *
+import pygame, math, os
 
 class Gladiator(Entity):
 

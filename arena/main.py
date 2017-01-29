@@ -1,4 +1,4 @@
-from screen import Screen
+from basics import Screen
 from gladiator import AI, Player
 import pygame, random, math
 

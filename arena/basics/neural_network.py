@@ -3,8 +3,7 @@ import json
 import random
 import sys
 from numpy import *
-from utils import *
-from training_set import *
+from .utils import *
 from datetime import datetime, timedelta
 
 class NeuralNetwork():

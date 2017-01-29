@@ -1,6 +1,6 @@
-from screen import Screen
-from state_machine import StateMachine
-from utils import Point
+from .screen import Screen
+from .state_machine import StateMachine
+from .utils import Point
 
 class Entity(StateMachine, Point):
 
