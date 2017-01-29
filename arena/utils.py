@@ -69,6 +69,8 @@ class Point:
     @property
     def normalized(self):
         l = self.length
+        if l == 0:
+            return Point()
         return Point(self.x / l, self.y / l)
 
     @property
@@ -164,6 +166,12 @@ class Point:
 
     def __str__(self):
         return "({}, {})".format(self.x, self.y)
+
+    def __lt__(self, other):
+        return self.lengthSq < other.lengthSq
+
+    def __gt__(self, other):
+        return self.lengthSq > other.lengthSq
 
     def __eq__(self, other):
         if other is None:

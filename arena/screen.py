@@ -114,14 +114,50 @@ class Screen:
         self.objectAddQueue = []
         self.objectRemoveQueue = []
         self.objectQueue = {}
-    
-    def Update(self):
+
+        self.keysPressed = []
+        self.keysReleased = []
+        self.keysDown = []
+
+    @staticmethod
+    def KeyDown(key):
+        return Screen.Instance.keyDown(key)
+    def keyDown(self, key):
+        return self.keysDown[key]
+
+    @staticmethod
+    def KeyPressed(key):
+        return Screen.Instance.keyPressed(key)
+    def keyPressed(self, key):
+        return self.keysPressed[key]
+
+    @staticmethod
+    def KeyReleased(key):
+        return Screen.Instance.keyReleased(key)
+    def keyReleased(self, key):
+        return self.keysReleased[key]
+
+    def updateKeys(self):
+        self.keysDown = pygame.key.get_pressed()
+        self.keysPressed = [0] * len(self.keysDown)
+        self.keysReleased = [0] * len(self.keysDown)
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                self.keysPressed[event.key] = 1
+            elif event.type == pygame.KEYUP:
+                self.keysReleased[event.key] = 1
+
+    def updateFunctionQueues(self):
         while len(self.updateFunctionsAddQueue) > 0:
             self._AddUpdateFunction(self.updateFunctionsAddQueue.pop())
         while len(self.updateFunctionsRemoveQueue) > 0:
             self._RemoveUpdateFunctionsByKey(self.updateFunctionsRemoveQueue.pop())
+    
+    def Update(self):
+        self.updateKeys()                   
+        self.updateFunctionQueues()
         for key in self.updateOrder:
-            #print("key: " + key)
             for updateFunction in self.updateFunctions[key]:
                 updateFunction()
 
@@ -201,4 +237,5 @@ class Screen:
         Screen.Instance.screen.blit(textRendered, intPosition)
 
     def MousePosition(self):
-        return pygame.mouse.get_pos()
+        p = pygame.mouse.get_pos()
+        return Point(p[0], p[1])

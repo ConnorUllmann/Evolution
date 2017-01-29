@@ -4,6 +4,7 @@ from utils import *
 import math
 from entity import Entity
 from neural_network import NeuralNetwork
+import os
 
 class Gladiator(Entity):
 
@@ -11,10 +12,13 @@ class Gladiator(Entity):
         Entity.__init__(self, x, y)
         self.color = self.defaultColor = (255, 255, 255)
         self.radius = 16
+        self.speedDash = 20
+        self.speedNormal = 2
+        self.detectableClasses = []
         
         self.AddState("normal", self.UpdateNormal)
         self.AddState("hit", self.UpdateHit, self.BeginHit, self.EndHit)
-        self.AddState("dash", self.UpdateDash)
+        self.AddState("dash", self.UpdateDash, self.BeginDash)
         self.SetState("normal")
 
     def UpdateNormal(self):
@@ -34,51 +38,64 @@ class Gladiator(Entity):
         self.color = self.defaultColor
 
     def UpdateDash(self):
-        pass
+        self.UpdatePosition(0.95)
+        
+        if self.v.lengthSq <= 8**2:
+            self.SetState("normal")
+
+    def BeginDash(self, targetAngle):
+        self.v = self.speedDash * Point(math.cos(targetAngle), math.sin(targetAngle))
 
     def Render(self):
-        Screen.DrawCircle(self, self.radius, self.color)
+        Screen.DrawCircle(self, self.radius * max(0.5, 1 - self.v.lengthSq / self.speedDash**2), self.color)
 
     def collides(self, other):
         return CirclesCollide(self, self.radius, other, other.radius)
 
-    @property
-    def stateInt(self):
-        if self.state == "normal":
-            return 0
-        if self.state == "hit":
-            return 1
-        if self.state == "dash":
-            return 2
-        return -1
+    def UpdatePosition(self, friction):
+        self.v *= friction
+        self.x += self.v.x
+        self.y += self.v.y
 
-    def stateIntToName(self, stateInt):
-        if stateInt == 0:
-            return "normal"
-        if stateInt == 1:
-            return "hit"
-        if stateInt == 2:
-            return "dash"
-        return None
+        self.x = min(max(self.x, 0), Screen.Instance.width)
+        self.y = min(max(self.y, 0), Screen.Instance.height)
 
     def ExecuteOutputs(self, outputs):
+        acc = 3
         if outputs[0] > 0.5:
-            self.v.x -= 5
+            self.v.x -= acc
         if outputs[1] > 0.5:
-            self.v.x += 5
+            self.v.x += acc
         if outputs[2] > 0.5:
-            self.v.y -= 5
+            self.v.y -= acc
         if outputs[3] > 0.5:
-            self.v.y += 5
-        self.SetState(self.stateIntToName(outputs[4]))
+            self.v.y += acc
 
-    def GetNeuralInputs(self, classNames):
-        neuralInputs = [self.v.x, self.v.y, self.stateInt]
-        entities = []
-        for className in classNames:
-            entities.extend(Entity.GetAllEntitiesOfType(className))
+        if self.v.lengthSq >= self.speedNormal**2:
+            self.v = max(self.speedNormal*self.v.normalized, 0.8 * self.v)
+
+        outputStateName = self.StateIdToStateName(outputs[4])
+        if outputStateName == "dash":
+            self.SetState(outputStateName, outputs[5])
+        else:
+            self.SetState(outputStateName)
+
+    def GetNeuralInputs(self):
         length = 1000
         lines = 18
+        stateId = self.StateNameToStateId(self.state)
+        if stateId is None:
+            stateId = 0
+        neuralInputs = [self.v.x, self.v.y, stateId]
+        if len(self.detectableClasses) <= 0:
+            return neuralInputs.extend([1] * lines)
+        
+        entities = []
+        for className in self.detectableClasses:
+            entities.extend(Entity.GetAllEntitiesOfType(className))
+        if self in entities:
+            entities.remove(self)
+        
         for i in range(lines):
             m = Point(self.x, self.y)
             n = Point(length, 0)
@@ -106,51 +123,59 @@ class Player(Gladiator):
     def __init__(self, x, y):
         Gladiator.__init__(self, x, y)
         self.color = self.defaultColor = (0, 255, 0)
+        self.detectableClasses = ["AI"]
 
     def UpdateNormal(self):
-        self.v.x = self.v.y = 0
-        keys = pygame.key.get_pressed()
-        neuralInputs = self.GetNeuralInputs(["AI"])
-        neuralOutputs = [0,0,0,0,0]
-        neuralOutputs[0] = int(keys[pygame.K_LEFT] or keys[pygame.K_a])
-        neuralOutputs[1] = int(keys[pygame.K_RIGHT] or keys[pygame.K_d])
-        neuralOutputs[2] = int(keys[pygame.K_UP] or keys[pygame.K_w])
-        neuralOutputs[3] = int(keys[pygame.K_DOWN] or keys[pygame.K_s])
-        neuralOutputs[4] = self.stateInt
+        neuralOutputs = self.GetNeuralOutputs()
         self.ExecuteOutputs(neuralOutputs)
+        
+        if Screen.KeyDown(pygame.K_SPACE):
+            self.SetState("dash", (Screen.Instance.MousePosition() - self).radians)
 
+        self.UpdatePosition(0.9)
+        
+    def GetNeuralOutputs(self):
+        return [
+            int(Screen.KeyDown(pygame.K_LEFT) or Screen.KeyDown(pygame.K_a)),
+            int(Screen.KeyDown(pygame.K_RIGHT) or Screen.KeyDown(pygame.K_d)),
+            int(Screen.KeyDown(pygame.K_UP) or Screen.KeyDown(pygame.K_w)),
+            int(Screen.KeyDown(pygame.K_DOWN) or Screen.KeyDown(pygame.K_s)),
+            self.StateNameToStateId(self.nextStateName if self.nextStateName is not None else self.state),
+            (Screen.Instance.MousePosition() - self).radians if self.nextStateName == "dash" else 0
+        ]
+
+    def OutputNeuralInputsAndOutputs(self, neuralInputs, neuralOutputs):
         allZeroes = True
         for neuralOutput in neuralOutputs:
             if neuralOutput > 0.5:
                 allZeroes = False
                 break
         if not allZeroes:
+            neuralInputs = self.GetNeuralInputs()
             with open("dataset.txt", "a") as output:
                 output.write(Gladiator.NeuralInputsAndOutputsString(neuralInputs, neuralOutputs) + "\n")
-                    
-        self.x += self.v.x
-        self.y += self.v.y
-
-        self.x = min(max(self.x, 0), Screen.Instance.width)
-        self.y = min(max(self.y, 0), Screen.Instance.height)
+        
 
 class AI(Gladiator):
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, teacher=None, nn=None):
         Gladiator.__init__(self, x, y)
         self.color = self.defaultColor = (0, 128, 255)
-        self.InitializeNeuralNetwork()
+        self.detectableClasses = ["Player", "AI"]
+
+        self.nn = None
+        self.teacher = teacher
+        if self.teacher is not None:
+            self.LearnFromTeacher()
+        elif nn is not None:
+            self.nn = nn
+        else:
+            self.InitializeNeuralNetwork("LastNeuralNetwork")
 
     def UpdateNormal(self):
-        neuralInputs = self.GetNeuralInputs(["Player"])
-        neuralOutputs = self.GetNeuralOutputs(neuralInputs)
-        self.ExecuteOutputs(neuralOutputs)
-        
-        self.x += self.v.x
-        self.y += self.v.y
-
-        self.x = min(max(self.x, 0), Screen.Instance.width)
-        self.y = min(max(self.y, 0), Screen.Instance.height)
+        self.ExecuteOutputs(self.GetNeuralOutputs())
+        self.LearnFromTeacher()
+        self.UpdatePosition(0.9)
 
         players = Entity.GetAllEntitiesOfType("Player")
         for player in players:
@@ -160,12 +185,22 @@ class AI(Gladiator):
     def Render(self):
         Gladiator.Render(self)
 
-    def GetNeuralOutputs(self, neuralInputs):
+    def GetNeuralOutputs(self):
+        return self.GetNeuralOutputsFromInputs(self.GetNeuralInputs())
+
+    def GetNeuralOutputsFromInputs(self, neuralInputs):
         return self.nn.output(neuralInputs)
 
-    def UpdateNeuralNetwork(self):
-        neuralInputs = self.GetNeuralInputs()
-        neuralOutputs = self.GetNeuralOutputs(neuralInputs)
+    def LearnFromTeacher(self):
+        if self.teacher is not None:
+            teacherNeuralInputs = self.teacher.GetNeuralInputs()
+            teacherNeuralOutputs = self.teacher.GetNeuralOutputs()
+            if self.nn is None:
+                self.nn = NeuralNetwork([len(teacherNeuralInputs), 12, len(teacherNeuralOutputs)])
+            self.TrainOnSingleTest(teacherNeuralInputs, teacherNeuralOutputs)        
+    
+    def TrainOnSingleTest(self, singleInput, singleOutput):
+        self.nn.train([[singleInput, singleOutput]], 10, 1, 0.025)
 
     def TestsToBatches(self, tests, batchSize=30):
         batches = []
@@ -176,22 +211,23 @@ class AI(Gladiator):
 
     def LogFileToBatches(self, filename):
         batches = []
-        with open(filename, "r") as _input:
-            tests = []
-            for line in _input:
-                lineSplit = line.split("|")
-                inputs = list(float(x) for x in lineSplit[0].split(","))
-                outputs = list(float(str(x).replace("\n", "")) for x in lineSplit[1].split(","))
-                tests.append([inputs, outputs])
-            batches = self.TestsToBatches(tests)
+        if os.path.isfile(filename):
+            with open(filename, "r") as _input:
+                tests = []
+                for line in _input:
+                    lineSplit = line.split("|")
+                    inputs = list(float(x) for x in lineSplit[0].split(","))
+                    outputs = list(float(str(x).replace("\n", "")) for x in lineSplit[1].split(","))
+                    tests.append([inputs, outputs])
+                batches = self.TestsToBatches(tests)
         return batches
         
-    def InitializeNeuralNetwork(self, loadFromFile=False):
-        if loadFromFile:
+    def InitializeNeuralNetwork(self, filename=None):
+        if filename is not None:
             try:
-                with open("LastNeuralNetwork.txt", "r") as i:
+                with open(filename + ".txt", "r") as i:
                     pass
-                self.nn = NeuralNetwork.Load("LastNeuralNetwork")
+                self.nn = NeuralNetwork.Load(filename)
             except:
                 pass
                 #neuralInputs = self.GetNeuralInputs(["Player"])
@@ -199,6 +235,10 @@ class AI(Gladiator):
                 #self.nn = NeuralNetwork([len(neuralInputs), 8, len(neuralOutputs)])
         else:
             batches = self.LogFileToBatches("dataset.txt")
+            
+            if len(batches) <= 0:
+                return
+            
             print("Beginning training!")
             inputCount = len(batches[0][0][0])
             outputCount = len(batches[0][0][1])

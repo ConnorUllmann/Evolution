@@ -15,7 +15,8 @@ class _State:
     def end(self):
         return _State.CarefulExecute(self.endCallback)
 
-    def __init__(self, name, updateCallback, beginCallback, endCallback):
+    def __init__(self, ID, name, updateCallback, beginCallback, endCallback):
+        self.id = ID
         self.name = name
         self.updateCallback = updateCallback
         self.beginCallback = beginCallback
@@ -29,20 +30,23 @@ class StateMachine:
 
     def RemoveState(self, stateName):
         if self.StateExists(stateName):
-            self.states.pop(stateName, None)
+            _id = self.states.pop(stateName, None).id
+            self.statesById.pop(_id, None)
             return True
         return False
 
     def AddState(self, stateName, stateUpdateCallback=None, stateBeginCallback=None, stateEndCallback=None):
         if stateName is None:
             return False
-        self.states[stateName] = _State(stateName, stateUpdateCallback, stateBeginCallback, stateEndCallback)
+        stateId = self._GetNewId()
+        self.states[stateName] = self.statesById[stateId] = _State(stateId, stateName, stateUpdateCallback, stateBeginCallback, stateEndCallback)
         return True
 
     def SetState(self, nextStateName, *args):
         if self.StateExists(nextStateName):
             self.nextStateName = nextStateName
             self.nextStateBeginArgs = args
+            #print("next state: {} begin({})".format(self.nextStateName, self.nextStateBeginArgs))
             return True
         return False
 
@@ -54,12 +58,27 @@ class StateMachine:
             if self.lastStateName is not None:
                 self.states[self.lastStateName].end()
             if self.currStateName is not None:
+                #print("next state begin args:")
+                #print(*self.nextStateBeginArgs)
                 self.states[self.currStateName].begin(*self.nextStateBeginArgs)
         
         if self.currStateName is not None:
             self.states[self.currStateName].update()
 
+    def _GetNewId(self):
+        _id = self.id
+        self.id += 1
+        return _id
+
+    def StateNameToStateId(self, stateName):
+        return self.states[stateName].id if self.StateExists(stateName) else None
+
+    def StateIdToStateName(self, stateId):
+        return self.statesById[stateId].name if stateId in self.statesById else None
+
     def __init__(self):
+        self.id = 0
+        self.statesById = {}
         self.states = {}
         self.lastStateName = None
         self.currStateName = None
@@ -82,12 +101,29 @@ class _StateMachineTestObject:
         self.sm.AddState("idle", self.IdleUpdate, self.IdleBegin, self.IdleEnd)
         self.sm.SetState("idle")
 
+        print(", ".join(k for k in self.sm.states))
+        input(", ".join(str(k) for k in self.sm.statesById))
 
         self.sm.AddState("nothing")
-        print("States exist: {} {} {} = 1 1 1".format(int(self.sm.StateExists("active")), int(self.sm.StateExists("idle")), int(self.sm.StateExists("nothing"))))
+
+        print(", ".join(k for k in self.sm.states))
+        input(", ".join(str(k) for k in self.sm.statesById))
         
         self.sm.RemoveState("nothing")
-        print("States exist: {} {} {} = 1 1 0".format(int(self.sm.StateExists("active")), int(self.sm.StateExists("idle")), int(self.sm.StateExists("nothing"))))
+
+        print(", ".join(k for k in self.sm.states))
+        input(", ".join(str(k) for k in self.sm.statesById))
+        
+        self.sm.AddState("new")
+
+        print(", ".join(k for k in self.sm.states))
+        input(", ".join(str(k) for k in self.sm.statesById))
+        
+        self.sm.RemoveState("active")
+        self.sm.RemoveState("nothing")
+
+        print(", ".join(k for k in self.sm.states))
+        input(", ".join(str(k) for k in self.sm.statesById))
         
 
     def Update(self):

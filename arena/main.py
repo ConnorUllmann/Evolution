@@ -3,15 +3,24 @@ from gladiator import AI, Player
 import pygame, random, math
 
 def PreGame():
-    global player
     pygame.display.set_caption("Arena")
+
+firstFrameTriggered = False
+def FirstFrame():
+    global player
     player = Player(200, 200)
-    AI(500, 100)
-    AI(400, 300)
+    firstborn = AI(500, 100, player)
+    nn = firstborn.nn
+    AI(550, 100, player, nn)
+    AI(500, 150, player, nn)
+    AI(500, 200, player, nn)
+    AI(550, 150, player, nn)
 
 def UpdateGame():
-    global player
-    pygame.event.poll()
+    global firstFrameTriggered
+    if firstFrameTriggered is False:
+        FirstFrame()
+        firstFrameTriggered = True
     pass
 
 def RenderGame():
