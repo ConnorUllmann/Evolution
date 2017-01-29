@@ -43,7 +43,6 @@ def Heartbeat(x):
 def Sigmoid(x):
     return 1.0 / (1.0 + exp(-x))
         
-
 # The derivative of the Sigmoid function.
 # This is the gradient of the Sigmoid curve.
 # It indicates how confident we are about the existing weight.
@@ -211,46 +210,13 @@ class Point:
 ##    def __str__(self):
 ##        return "{} {}".format(Animal.__str__(self), Point.__str__(self))
 
-def Add(a, b):
-    return [a[0] + b[0], a[1] + b[1]]
-
-def Scale(a, b):
-    return [b * a[0], b * a[1]]
-
-def Length(a):
-    return sqrt(a[0]**2 + a[1]**2)
-
-def LengthSq(a):
-    return a[0]**2 + a[1]**2
-
-def Normalize(a):
-    length = Length(a)
-    if length <= 0:
-        return (0, 0)
-    return Scale(a, 1/length)
-
-def Proj(a, b):
-    divisor = LengthSq(b)
-    if divisor <= 0:
-        return (0,0)
-    mult = Dot(a, b) / divisor
-    return (mult * b[0], mult * b[1])
-
-def Cross2(a, b):
-    return a[0]*b[1]-a[1]*b[0]
-
 def Cross3(a, b):
     return [a[1]*b[2] - a[2]*b[1],
          a[2]*b[0] - a[0]*b[2],
          a[0]*b[1] - a[1]*b[0]]
 
-def DistanceSq(a, b):
-    return LengthSq(((a[0] - b[0]), (a[1] - b[1])))
-def Distance(a, b):
-    return Length(((a[0] - b[0]), (a[1] - b[1])))
-
 def CirclesCollide(a_pos, a_radius, b_pos, b_radius):
-    return DistanceSq(a_pos, b_pos) <= (a_radius + b_radius)**2
+    return (a_pos - b_pos).lengthSq <= (a_radius + b_radius)**2
 
 def LinesIntersect(m, n, t, u):
     a = m[0]
@@ -278,15 +244,15 @@ def LinesIntersectionPoint(A, B, E, F, as_seg = True):
 
     denom = a1*b2 - a2*b1
     if denom == 0:
-            return None
+        return None
     ip = Point((b1*c2 - b2*c1)/denom, (a2*c1 - a1*c2)/denom)
     
-    if as_seg:
-        if (ip[0] - B[0])**2 + (ip[1] - B[1])**2 > (A[0] - B[0])**2 + (A[1] - B[1])**2 or \
-           (ip[0] - A[0])**2 + (ip[1] - A[1])**2 > (A[0] - B[0])**2 + (A[1] - B[1])**2 or \
-           (ip[0] - F[0])**2 + (ip[1] - F[1])**2 > (E[0] - F[0])**2 + (E[1] - F[1])**2 or \
-           (ip[0] - E[0])**2 + (ip[1] - E[1])**2 > (E[0] - F[0])**2 + (E[1] - F[1])**2:
-           return None
+    if as_seg and \
+        (ip[0] - B[0])**2 + (ip[1] - B[1])**2 > (A[0] - B[0])**2 + (A[1] - B[1])**2 or \
+        (ip[0] - A[0])**2 + (ip[1] - A[1])**2 > (A[0] - B[0])**2 + (A[1] - B[1])**2 or \
+        (ip[0] - F[0])**2 + (ip[1] - F[1])**2 > (E[0] - F[0])**2 + (E[1] - F[1])**2 or \
+        (ip[0] - E[0])**2 + (ip[1] - E[1])**2 > (E[0] - F[0])**2 + (E[1] - F[1])**2:
+        return None
     return ip
 
 def ColinearPointInsideLineSegment(pos, lineA, lineB):
@@ -335,13 +301,13 @@ def CircleLineCollide(center, radius, lineA, lineB, asSegment=True):
 
 def Torque(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])
-    return Cross2(r, forceVector)
+    return r.cross(forceVector)
 def TorquePushVector(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])
     return Proj(forceVector, r)
 def TorquePullVector(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[1] - centerOfMass[1], -forcePosition[0] + centerOfMass[0])
-    return Proj(forceVector, r)
+    return forceVector.proj(r)
 
 def Binary(x, digits=-1, asList=False):
     if type(x) is list:
@@ -362,36 +328,3 @@ def Binary(x, digits=-1, asList=False):
             r.append(int(c))
         return r
     return s
-
-def Xor(*args):
-    x = args[0]
-    for i in range(1, len(args)):
-        x = (x != args[i])
-    return [int(x)]
-
-def Opp(*args):
-    return [int(args[0] != args[1])]
-
-def Add(*args):
-    mid = int(len(args)/2)
-    a = 0
-    b = 0
-    c = 0
-    for i in range(0, int(mid)):
-        power = pow(2, i)
-        k = len(args) - 1 - i
-        a += power * args[k - mid]
-        b += power * args[k]
-        c += power
-    c = c * 2 + 1
-    y = int(a + b)
-    yString = Binary(y)
-    
-    ret = []
-    for c in yString:
-        ret.append(int(c == '1'))
-    while len(ret) < len(Binary(c)):
-        ret.insert(0, 0)
-    #print("{} + {} = {}".format(a, b, y))
-    #print("{} + {} = {}".format(args[:mid], args[mid:], ret))
-    return ret
