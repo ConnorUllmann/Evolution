@@ -80,6 +80,9 @@ class Point:
     def length(self):
         return sqrt(self.lengthSq)
 
+    def __len__(self):
+        return int(self.length)
+
     def dot(self, other):
         return self.x * other.x + self.y * other.y
 
@@ -144,6 +147,9 @@ class Point:
             return Point(self.x * other.x, self.y * other.y)
         else:
             return Point(self.x * other, self.y * other)
+
+    def __pow__(self, exponent):
+        return Point(self.x**exponent, self.y**exponent)
 
     def __rmul__(self, other):
         return self * other
