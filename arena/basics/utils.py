@@ -163,6 +163,10 @@ class Point:
     def __neg__(self):
         return Point(-self.x, -self.y)
 
+    def __hash__(self):
+        d = self.x + self.y
+        return int(d * (d + 1) / 2 + self.y)
+
     def __str__(self):
         return "({}, {})".format(self.x, self.y)
 
