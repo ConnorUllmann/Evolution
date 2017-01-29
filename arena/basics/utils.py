@@ -169,8 +169,14 @@ class Point:
     def __lt__(self, other):
         return self.lengthSq < other.lengthSq
 
+    def __le__(self, other):
+        return self.lengthSq <= other.lengthSq
+
     def __gt__(self, other):
         return self.lengthSq > other.lengthSq
+
+    def __ge__(self, other):
+        return self.lengthSq >= other.lengthSq
 
     def __eq__(self, other):
         if other is None:
