@@ -161,7 +161,7 @@ def Binary(x, digits=-1, asList=False):
     if type(x) is list:
         s = ""
         for c in x:
-            s = "{}{}".format(s, c)
+            s += str(c)
     else:
         s = "{0:b}".format(int(x))
     
@@ -176,3 +176,12 @@ def Binary(x, digits=-1, asList=False):
             r.append(int(c))
         return r
     return s
+
+def Debinary(x):
+    print("x: {}".format(x))
+    if type(x) is tuple or type(x) is list:
+        k = ''
+        for a in x:
+            k += str(a)
+        return int(k, 2)
+    return int(x, 2)

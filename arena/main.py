@@ -5,26 +5,51 @@ import pygame, random, math
 def PreGame():
     pygame.display.set_caption("Arena")
 
+queen = None
+hivemind = None
+player = None
+
+def GenerateAIs():
+    global player, hivemind, queen
+    queen = AI(500, 100, player)
+    hivemind = queen.nn
+    AI(300, 200, player, hivemind)
+    AI(400, 300, player, hivemind)
+    AI(550, 100).dummy=True
+    AI(500, 150).dummy=True
+    AI(500, 200).dummy=True
+    AI(550, 150).dummy=True
+    AI(200, 300).dummy=True
+    AI(150, 350).dummy=True
+    AI(150, 400).dummy=True
+    AI(200, 350).dummy=True
+    AI(600, 300).dummy=True
+    AI(550, 350).dummy=True
+    AI(650, 400).dummy=True
+    AI(600, 350).dummy=True
+
+def UpdateGame():
+    global firstFrameTriggered, hivemind, queen
+    
+    if firstFrameTriggered is False:
+        FirstFrame()
+        firstFrameTriggered = True
+
+    if hivemind is not None:
+        hivemind.save("hivemind")
+
+    with open("output.txt", "a") as output:
+        output.write(str(queen.GetNeuralOutputs()) + "\n")
+
+def RenderGame():
+    pass
+
 firstFrameTriggered = False
 def FirstFrame():
     global player
     player = Player(200, 200)
-    firstborn = AI(500, 100, player)
-    nn = firstborn.nn
-    AI(550, 100, player, nn)
-    AI(500, 150, player, nn)
-    AI(500, 200, player, nn)
-    AI(550, 150, player, nn)
-
-def UpdateGame():
-    global firstFrameTriggered
-    if firstFrameTriggered is False:
-        FirstFrame()
-        firstFrameTriggered = True
-    pass
-
-def RenderGame():
-    pass
+    open("output.txt", "w").close()
+    GenerateAIs()
     
 def StartGame():
     Screen(800, 400)

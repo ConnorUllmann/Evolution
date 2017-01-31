@@ -22,7 +22,6 @@ class Gladiator(Entity):
     def UpdateHit(self):
         self.hitTimer -= 1
         if self.hitTimer <= 0:
-            self.hitTimer = 0
             self.SetState("normal")
 
     def BeginHit(self):
@@ -31,6 +30,7 @@ class Gladiator(Entity):
 
     def EndHit(self):
         self.color = self.defaultColor
+        self.hitTimer = 0
 
     def UpdateDash(self):
         self.UpdatePosition(0.95)
@@ -38,8 +38,8 @@ class Gladiator(Entity):
         if self.v.lengthSq <= 8**2:
             self.SetState("normal")
 
-    def BeginDash(self, targetAngle):
-        self.v = self.speedDash * Point(math.cos(targetAngle), math.sin(targetAngle))
+    def BeginDash(self):
+        self.v = max(self.v.length, self.speedDash) * self.v.normalized
 
     def Render(self):
         Screen.DrawCircle(self, self.radius * max(0.5, 1 - self.v.lengthSq / self.speedDash**2), self.color)
@@ -52,8 +52,8 @@ class Gladiator(Entity):
         self.x += self.v.x
         self.y += self.v.y
 
-        self.x = min(max(self.x, 0), Screen.Instance.width)
-        self.y = min(max(self.y, 0), Screen.Instance.height)
+        self.x = min(max(self.x % Screen.Instance.width, 0), Screen.Instance.width)
+        self.y = min(max(self.y % Screen.Instance.height, 0), Screen.Instance.height)
 
     def ExecuteOutputs(self, outputs):
         acc = 3
@@ -69,11 +69,22 @@ class Gladiator(Entity):
         if self.v.lengthSq >= self.speedNormal**2:
             self.v = max(self.speedNormal*self.v.normalized, 0.8 * self.v)
 
-        outputStateName = self.StateIdToStateName(outputs[4])
-        if outputStateName == "dash":
-            self.SetState(outputStateName, outputs[5])
-        else:
-            self.SetState(outputStateName)
+        stateCountBinaryDigits = self.StateCountBinaryDigits()
+        if stateCountBinaryDigits > 0:
+            o = list(outputs[4:4+stateCountBinaryDigits])
+            for i in range(len(o)):
+                o[i] = int(round(o[i]))
+            outputStateId = Debinary(o)
+            for _id in self.statesById:
+                print("{} {}".format(_id, self.statesById[_id].name))
+            input("Why are Ids 3-5 instead of 0-3 so that I can use it to assign state by Id?")            
+            if outputStateId < self.stateCount:
+                outputStateName = self.StateIdToStateName(outputStateId)
+                print("> {} {}".format(outputStateId, outputStateName))
+                self.SetState(outputStateName)
+
+    def StateCountBinaryDigits(self):
+        return ceil(math.log(self.stateCount, 2))
 
     def GetNeuralInputs(self):
         length = 1000
@@ -125,19 +136,20 @@ class Player(Gladiator):
         self.ExecuteOutputs(neuralOutputs)
         
         if Screen.KeyDown(pygame.K_SPACE):
-            self.SetState("dash", (Screen.Instance.MousePosition() - self).radians)
+            self.SetState("dash")
 
         self.UpdatePosition(0.9)
         
     def GetNeuralOutputs(self):
-        return [
+        a = [
             int(Screen.KeyDown(pygame.K_LEFT) or Screen.KeyDown(pygame.K_a)),
             int(Screen.KeyDown(pygame.K_RIGHT) or Screen.KeyDown(pygame.K_d)),
             int(Screen.KeyDown(pygame.K_UP) or Screen.KeyDown(pygame.K_w)),
-            int(Screen.KeyDown(pygame.K_DOWN) or Screen.KeyDown(pygame.K_s)),
-            self.StateNameToStateId(self.nextStateName if self.nextStateName is not None else self.state),
-            (Screen.Instance.MousePosition() - self).radians if self.nextStateName == "dash" else 0
+            int(Screen.KeyDown(pygame.K_DOWN) or Screen.KeyDown(pygame.K_s))
         ]
+        stateId = self.StateNameToStateId(self.nextStateName if self.nextStateName is not None else self.state)
+        a.extend(Binary(stateId, math.ceil(math.log(self.stateCount, 2)), True))
+        return a
 
     def OutputNeuralInputsAndOutputs(self, neuralInputs, neuralOutputs):
         allZeroes = True
@@ -157,6 +169,7 @@ class AI(Gladiator):
         Gladiator.__init__(self, x, y)
         self.color = self.defaultColor = (0, 128, 255)
         self.detectableClasses = ["Player", "AI"]
+        self.dummy = False
 
         self.nn = None
         self.teacher = teacher
@@ -168,6 +181,9 @@ class AI(Gladiator):
             self.InitializeNeuralNetwork("LastNeuralNetwork")
 
     def UpdateNormal(self):
+        if self.dummy:
+            return
+        
         self.ExecuteOutputs(self.GetNeuralOutputs())
         self.LearnFromTeacher()
         self.UpdatePosition(0.9)
@@ -184,18 +200,19 @@ class AI(Gladiator):
         return self.GetNeuralOutputsFromInputs(self.GetNeuralInputs())
 
     def GetNeuralOutputsFromInputs(self, neuralInputs):
-        return self.nn.output(neuralInputs)
+        return self.nn.output(neuralInputs, True)
 
     def LearnFromTeacher(self):
         if self.teacher is not None:
             teacherNeuralInputs = self.teacher.GetNeuralInputs()
             teacherNeuralOutputs = self.teacher.GetNeuralOutputs()
             if self.nn is None:
-                self.nn = NeuralNetwork([len(teacherNeuralInputs), 12, len(teacherNeuralOutputs)])
-            self.TrainOnSingleTest(teacherNeuralInputs, teacherNeuralOutputs)        
+                self.nn = NeuralNetwork([len(teacherNeuralInputs), 12, 6, len(teacherNeuralOutputs)])
+            if self.teacher.nextStateName == "dash":
+                self.TrainOnSingleTest(teacherNeuralInputs, teacherNeuralOutputs)
     
     def TrainOnSingleTest(self, singleInput, singleOutput):
-        self.nn.train([[singleInput, singleOutput]], 10, 1, 0.025)
+        self.nn.train([[singleInput, singleOutput]], 100, 1, 0.05)
 
     def TestsToBatches(self, tests, batchSize=30):
         batches = []
@@ -242,4 +259,3 @@ class AI(Gladiator):
                 self.nn.trainWithBatches(batches, 0.025)
             print("Done training!")
             self.nn.save("LastNeuralNetwork")
-    

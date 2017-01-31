@@ -40,6 +40,7 @@ class StateMachine:
             return False
         stateId = self._GetNewId()
         self.states[stateName] = self.statesById[stateId] = _State(stateId, stateName, stateUpdateCallback, stateBeginCallback, stateEndCallback)
+        self.stateCount += 1
         return True
 
     def SetState(self, nextStateName, *args):
@@ -78,6 +79,7 @@ class StateMachine:
 
     def __init__(self):
         self.id = 0
+        self.stateCount = 0
         self.statesById = {}
         self.states = {}
         self.lastStateName = None

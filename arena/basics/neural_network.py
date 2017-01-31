@@ -97,9 +97,8 @@ class NeuralNetwork():
     
     def save(self, filename):
         data = self.data()
-        f = open(filename+".txt", "w")
-        json.dump(data, f)
-        f.close()
+        with open(filename+".txt", "w") as f:
+            json.dump(data, f)
     
     @staticmethod
     def Load(filename):
