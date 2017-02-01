@@ -178,13 +178,12 @@ class AI(Gladiator):
         self.detectableClasses = ["Player", "AI"]
         self.dummy = False
 
-        self.nn = None
+        self.nn = nn
         self.teacher = teacher
         self.lastLessons = []
+
         if self.teacher is not None:
             self.LearnFromTeacher()
-        elif nn is not None:
-            self.nn = nn
         else:
             self.InitializeNeuralNetwork("LastNeuralNetwork")
 

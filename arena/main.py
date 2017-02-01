@@ -1,6 +1,6 @@
-from basics import Screen
+from basics import Screen, NeuralNetwork
 from gladiator import AI, Player
-import pygame, random, math
+import pygame, random, math, os
 
 def PreGame():
     pygame.display.set_caption("Arena")
@@ -11,7 +11,9 @@ player = None
 
 def GenerateAIs():
     global player, hivemind, queen
-    queen = AI(550, 300, player)
+    nn = NeuralNetwork.Load("hivemind") if os.path.isfile("hivemind.txt") else None
+    print(nn)
+    queen = AI(550, 300, player, nn)
     hivemind = queen.nn
     AI(300, 200, player, hivemind)
     AI(400, 300, player, hivemind)
