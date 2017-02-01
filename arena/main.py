@@ -11,11 +11,11 @@ player = None
 
 def GenerateAIs():
     global player, hivemind, queen
-    queen = AI(500, 100, player)
+    queen = AI(550, 300, player)
     hivemind = queen.nn
     AI(300, 200, player, hivemind)
     AI(400, 300, player, hivemind)
-    AI(550, 100).dummy=True
+    AI(500, 300).dummy=True
     AI(500, 150).dummy=True
     AI(500, 200).dummy=True
     AI(550, 150).dummy=True
@@ -52,7 +52,7 @@ def FirstFrame():
     GenerateAIs()
     
 def StartGame():
-    Screen(800, 400)
+    Screen(800, 800)
     PreGame()
     Screen.Instance.AddUpdateFunction("main", UpdateGame)
     Screen.Instance.AddRenderFunction("main", RenderGame)

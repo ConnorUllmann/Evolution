@@ -67,8 +67,8 @@ class StateMachine:
             self.states[self.currStateName].update()
 
     def _GetNewId(self):
-        _id = self.id
-        self.id += 1
+        _id = self.idCounter
+        self.idCounter += 1
         return _id
 
     def StateNameToStateId(self, stateName):
@@ -78,7 +78,7 @@ class StateMachine:
         return self.statesById[stateId].name if stateId in self.statesById else None
 
     def __init__(self):
-        self.id = 0
+        self.idCounter = 0
         self.stateCount = 0
         self.statesById = {}
         self.states = {}

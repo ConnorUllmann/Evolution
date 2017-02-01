@@ -178,7 +178,6 @@ def Binary(x, digits=-1, asList=False):
     return s
 
 def Debinary(x):
-    print("x: {}".format(x))
     if type(x) is tuple or type(x) is list:
         k = ''
         for a in x:
