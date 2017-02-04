@@ -112,7 +112,7 @@ class Gladiator(Entity):
     def RadialSweep(self, lines, length):
         entities = self.GetAllDetectableInstances()
         retPoints = []
-        retNames = []
+        retEntities = []
         for i in range(lines):
             m = Point.Clone(self)
             n = Point(length, 0)
@@ -125,12 +125,12 @@ class Gladiator(Entity):
                         n = Point.Clone(collisionPoint)
                         e = entity
             retPoints.append(n)
-            retNames.append(e.__class__.__name__)
-        return [retPoints, retNames]
+            retEntities.append(e)
+        return [retPoints, retEntities]
 
     def GetNeuralInputs(self):
         length = 1000
-        lines = 36
+        lines = 16
 
         stateId = self.StateNameToStateId(self.state)
         if stateId is None:
@@ -142,14 +142,27 @@ class Gladiator(Entity):
             return neuralInputs.extend([1] * lines)
 
         sweep = self.RadialSweep(lines, length)
-        for point, name in zip(sweep[0], sweep[1]):
-            neuralInputs.append((point - self).length / length)
-            neuralInputs.append(name == self.__class__.__name__)
+        for point, entity in zip(sweep[0], sweep[1]):
+            neuralInputs.append(max(1 - (point - self).length / 160, 0))
+            neuralInputs.append((entity.__class__.__name__ == self.__class__.__name__) if entity is not None else False)
+            neuralInputs.extend(Gladiator.AngleToDirectionalOutput(entity.v.radians if entity is not None else 0))
         return neuralInputs
 
     def RenderNeuralInputs(self, lines, length):
         for p in self.RadialSweep(lines, length)[0]:
             Screen.Instance.DrawLine(self, p, (255, 255, 0))
+
+    @staticmethod
+    def AngleToDirectionalOutput(radians):
+        v = Point(math.cos(radians), math.sin(radians))
+        threshold = 0.4
+        a = [
+            v.x < -threshold,
+            v.x > threshold,
+            v.y < -threshold,
+            v.y > threshold
+        ]
+        return a
 
     @staticmethod
     def NeuralInputsAndOutputsString(neuralInputs, neuralOutputs):
@@ -205,14 +218,7 @@ class Swarmling(Gladiator):
         self.detectableClasses = ["Swarmling", "AI"]
 
     def GetNeuralOutputs(self):
-        v = Point(math.cos(self.angle), math.sin(self.angle))
-        threshold = 0.4
-        a = [
-            v.x < -threshold,
-            v.x > threshold,
-            v.y < -threshold,
-            v.y > threshold
-        ]
+        a = Gladiator.AngleToDirectionalOutput(self.angle)
         stateId = self.StateNameToStateId(self.nextStateName if self.nextStateName is not None else self.state)
         a.extend(Binary(stateId, self.StateCountBinaryDigits(), True))
         return a        
@@ -241,6 +247,8 @@ class Swarmling(Gladiator):
 
 class AI(Gladiator):
 
+    InternalLayerSizes = [40]
+
     def __init__(self, x, y, teachers=None, nn=None):
         Gladiator.__init__(self, x, y)
         self.color = self.defaultColor = (0, 128, 255)
@@ -250,15 +258,17 @@ class AI(Gladiator):
         self.teachers = teachers if teachers is not None else []
         self.lastLessons = []
 
-        if len(self.teachers) > 0:
-            self.LearnFromTeachers()
-        else:
-            self.InitializeNeuralNetwork("hivemind")
-
     def UpdateNormal(self):
-        self.ExecuteOutputs(self.GetNeuralOutputs())
         self.LearnFromTeachers()
+        self.ExecuteOutputs(self.GetNeuralOutputs())
         self.UpdatePosition(0.9)
+
+    @staticmethod
+    def NeuralNetworkFromInputsAndOutputs(inputs, outputs):
+        sizes = [len(inputs)]
+        sizes.extend(AI.InternalLayerSizes)
+        sizes.append(len(outputs))
+        return NeuralNetwork(sizes)
 
     def GetNeuralOutputs(self):
         return self.GetNeuralOutputsFromInputs(self.GetNeuralInputs())
@@ -268,15 +278,14 @@ class AI(Gladiator):
 
     def LearnLesson(self, teacherNeuralInputs, teacherNeuralOutputs):
         if self.nn is None:
-            teacherNeuralOutputsCount = len(teacherNeuralOutputs)
-            self.nn = NeuralNetwork([len(teacherNeuralInputs), 2 * teacherNeuralOutputsCount, teacherNeuralOutputsCount])
+            self.nn = AI.NeuralNetworkFromInputsAndOutputs(teacherNeuralInputs, teacherNeuralOutputs)
 
         self.lastLessons.append([teacherNeuralInputs, teacherNeuralOutputs])
         while len(self.lastLessons) > 5:
             self.lastLessons.pop(0)
 
-        if not self.LessonIsRedundant(teacherNeuralInputs, teacherNeuralOutputs):
-            self.TrainOnSingleTest(teacherNeuralInputs, teacherNeuralOutputs)
+        #if not self.LessonIsRedundant(teacherNeuralInputs, teacherNeuralOutputs):
+        self.TrainOnSingleTest(teacherNeuralInputs, teacherNeuralOutputs)
 
     def LessonIsRedundant(self, teacherNeuralInputs, teacherNeuralOutputs):
         for lesson in self.lastLessons:
@@ -314,29 +323,14 @@ class AI(Gladiator):
                     tests.append([inputs, outputs])
                 batches = self.TestsToBatches(tests)
         return batches
-        
-    def InitializeNeuralNetwork(self, filename=None):
-        if filename is not None:
-            try:
-                with open(filename + ".txt", "r") as i:
-                    pass
-                self.nn = NeuralNetwork.Load(filename)
-            except:
-                pass
-                #neuralInputs = self.GetNeuralInputs(["Player"])
-                #neuralOutputs = self.GetNeuralOutputs(neuralInputs)
-                #self.nn = NeuralNetwork([len(neuralInputs), 8, len(neuralOutputs)])
-        else:
-            batches = self.LogFileToBatches("dataset.txt")
-            
-            if len(batches) <= 0:
-                return
-            
-            print("Beginning training!")
-            inputCount = len(batches[0][0][0])
-            outputCount = len(batches[0][0][1])
-            self.nn = NeuralNetwork([inputCount, 12, outputCount])
-            for x in range(100):
-                self.nn.trainWithBatches(batches, 0.025)
-            print("Done training!")
-            self.nn.save("LastNeuralNetwork")
+
+    def InitializeNeuralNetwork(self, filename="dataset.txt", roundsOfTraining=100):
+        batches = self.LogFileToBatches(filename)
+        if len(batches) <= 0:
+            return
+
+        print("Beginning training!")
+        self.nn = AI.NeuralNetworkFromInputsAndOutputs(batches[0][0][0], batches[0][0][1])
+        for x in range(roundsOfTraining):
+            self.nn.trainWithBatches(batches, 0.025)
+        print("Done training!")

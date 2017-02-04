@@ -102,9 +102,8 @@ class NeuralNetwork():
     
     @staticmethod
     def Load(filename):
-        f = open(filename+".txt", "r")
-        data = json.load(f)
-        f.close()
+        with open(filename+".txt", "r") as f:
+            data = json.load(f)
         net = NeuralNetwork(data["sizes"])
         net.weights = [array(w) for w in data["weights"]]
         net.biases = [array(b) for b in data["biases"]]
