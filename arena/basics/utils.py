@@ -157,6 +157,14 @@ def TorquePullVector(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[1] - centerOfMass[1], -forcePosition[0] + centerOfMass[0])
     return forceVector.proj(r)
 
+def AngleDiff(a, b):
+    diff = b - a
+    while diff > 180:
+        diff -= 360
+    while diff <= -180:
+        diff += 360
+    return diff
+
 def Binary(x, digits=-1, asList=False):
     if type(x) is list:
         s = ""

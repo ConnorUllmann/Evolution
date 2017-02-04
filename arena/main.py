@@ -1,5 +1,5 @@
 from basics import Screen, NeuralNetwork
-from gladiator import AI, Player
+from gladiator import AI, Player, Swarmling
 import pygame, random, math, os
 
 def PreGame():
@@ -10,25 +10,34 @@ hivemind = None
 player = None
 
 def GenerateAIs():
-    global player, hivemind, queen
+    global hivemind, queen
+    swarmlings = []
+    disrupter = Swarmling(Screen.Instance.width/2, Screen.Instance.height/2)
+    disrupter.SetState("stunned")
+    swarmlings.append(Swarmling(500, 300))
+    swarmlings.append(Swarmling(500, 150))
+    swarmlings.append(Swarmling(500, 200))
+    swarmlings.append(Swarmling(550, 150))
+    swarmlings.append(Swarmling(200, 300))
+    swarmlings.append(Swarmling(150, 350))
+    swarmlings.append(Swarmling(150, 400))
+    swarmlings.append(Swarmling(200, 350))
+    swarmlings.append(Swarmling(600, 300))
+    swarmlings.append(Swarmling(550, 350))
+    swarmlings.append(Swarmling(650, 400))
+    swarmlings.append(Swarmling(600, 350))
+
     nn = NeuralNetwork.Load("hivemind") if os.path.isfile("hivemind.txt") else None
-    print(nn)
-    queen = AI(550, 300, player, nn)
+    queen = AI(550, 300, swarmlings, nn)
     hivemind = queen.nn
-    AI(300, 200, player, hivemind)
-    AI(400, 300, player, hivemind)
-    AI(500, 300).dummy=True
-    AI(500, 150).dummy=True
-    AI(500, 200).dummy=True
-    AI(550, 150).dummy=True
-    AI(200, 300).dummy=True
-    AI(150, 350).dummy=True
-    AI(150, 400).dummy=True
-    AI(200, 350).dummy=True
-    AI(600, 300).dummy=True
-    AI(550, 350).dummy=True
-    AI(650, 400).dummy=True
-    AI(600, 350).dummy=True
+    AI(500, 100, None, nn)
+    AI(500, 200, None, nn)
+    AI(500, 400, None, nn)
+    AI(500, 500, None, nn)
+    AI(300, 100, None, nn)
+    AI(300, 200, None, nn)
+    AI(300, 400, None, nn)
+    AI(300, 500, None, nn)
 
 def UpdateGame():
     global firstFrameTriggered, hivemind, queen
@@ -49,12 +58,12 @@ def RenderGame():
 firstFrameTriggered = False
 def FirstFrame():
     global player
-    player = Player(200, 200)
+    #player = Player(200, 200)
     open("output.txt", "w").close()
     GenerateAIs()
     
 def StartGame():
-    Screen(800, 800)
+    Screen(800, 400)
     PreGame()
     Screen.Instance.AddUpdateFunction("main", UpdateGame)
     Screen.Instance.AddRenderFunction("main", RenderGame)

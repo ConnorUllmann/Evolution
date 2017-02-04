@@ -8,12 +8,13 @@ class Gladiator(Entity):
         self.color = self.defaultColor = (255, 255, 255)
         self.radius = 16
         self.speedDash = 20
-        self.speedNormal = 2
+        self.speedNormal = 4
         self.detectableClasses = []
         
         self.AddState("normal", self.UpdateNormal)
         self.AddState("hit", self.UpdateHit, self.BeginHit, self.EndHit)
         self.AddState("dash", self.UpdateDash, self.BeginDash)
+        self.AddState("stunned", self.UpdateStunned)
         self.SetState("normal")
 
     def UpdateNormal(self):
@@ -32,8 +33,22 @@ class Gladiator(Entity):
         self.color = self.defaultColor
         self.hitTimer = 0
 
+    def UpdateStunned(self):
+        self.v = self.speedNormal * self.v.normalized
+        self.v.radians += 1
+
     def UpdateDash(self):
         self.UpdatePosition(0.95)
+
+        entities = self.GetAllDetectableInstances()
+        for entity in entities:
+            if self.collides(entity):
+                #d = self - entity
+                #v = Point(self.radius + entity.radius - d.length, 0)
+                #v.radians = d.radians
+                #self.v += v
+                #entity.v -= v
+                entity.SetState("hit")
         
         if self.v.lengthSq <= 8**2:
             self.SetState("normal")
@@ -42,7 +57,9 @@ class Gladiator(Entity):
         self.v = max(self.v.length, self.speedDash) * self.v.normalized
 
     def Render(self):
-        Screen.DrawCircle(self, self.radius * max(0.5, 1 - self.v.lengthSq / self.speedDash**2), self.color)
+        radius = self.radius * max(0.5, 1 - self.v.lengthSq / self.speedDash**2)
+        Screen.DrawCircle(self, radius, self.color)
+        Screen.DrawLine(self, self + self.v.normalized * radius * 1.05, (max(self.color[0] - 40, 0), max(self.color[1] - 40, 0), max(self.color[2] - 40, 0)), 3)
         #self.RenderNeuralInputs(36, 1000)
 
     def collides(self, other):
@@ -68,7 +85,7 @@ class Gladiator(Entity):
             self.v.y += acc
 
         if self.v.lengthSq >= self.speedNormal**2:
-            self.v = max(self.speedNormal*self.v.normalized, 0.8 * self.v)
+            self.v = max(self.speedNormal*self.v.normalized, 0.9 * self.v)
 
         stateIndexStart = 4
         stateCountBinaryDigits = self.StateCountBinaryDigits()
@@ -84,25 +101,32 @@ class Gladiator(Entity):
     def StateCountBinaryDigits(self):
         return ceil(math.log(self.stateCount, 2))
 
-    def RadialSweep(self, lines, length):
+    def GetAllDetectableInstances(self):
         entities = []
         for className in self.detectableClasses:
             entities.extend(Entity.GetAllEntitiesOfType(className))
         if self in entities:
             entities.remove(self)
+        return entities
 
-        ret = []
+    def RadialSweep(self, lines, length):
+        entities = self.GetAllDetectableInstances()
+        retPoints = []
+        retNames = []
         for i in range(lines):
             m = Point.Clone(self)
             n = Point(length, 0)
             n.radians = i / lines * math.pi * 2
             n += m
+            e = None
             for entity in entities:
                 for collisionPoint in CircleLineCollide(entity, entity.radius, m, n):
                     if (collisionPoint - m).lengthSq < (n - m).lengthSq:
                         n = Point.Clone(collisionPoint)
-            ret.append(n)
-        return ret
+                        e = entity
+            retPoints.append(n)
+            retNames.append(e.__class__.__name__)
+        return [retPoints, retNames]
 
     def GetNeuralInputs(self):
         length = 1000
@@ -117,12 +141,14 @@ class Gladiator(Entity):
         if len(self.detectableClasses) <= 0:
             return neuralInputs.extend([1] * lines)
 
-        for p in self.RadialSweep(lines, length):
-            neuralInputs.append((p - self).length / length)
+        sweep = self.RadialSweep(lines, length)
+        for point, name in zip(sweep[0], sweep[1]):
+            neuralInputs.append((point - self).length / length)
+            neuralInputs.append(name == self.__class__.__name__)
         return neuralInputs
 
     def RenderNeuralInputs(self, lines, length):
-        for p in self.RadialSweep(lines, length):
+        for p in self.RadialSweep(lines, length)[0]:
             Screen.Instance.DrawLine(self, p, (255, 255, 0))
 
     @staticmethod
@@ -134,7 +160,7 @@ class Player(Gladiator):
     def __init__(self, x, y):
         Gladiator.__init__(self, x, y)
         self.color = self.defaultColor = (0, 255, 0)
-        self.detectableClasses = ["AI"]
+        self.detectableClasses = ["AI", "Swarmling"]
 
     def UpdateNormal(self):
         neuralOutputs = self.GetNeuralOutputs()
@@ -168,41 +194,71 @@ class Player(Gladiator):
             neuralInputs = self.GetNeuralInputs()
             with open("dataset.txt", "a") as output:
                 output.write(Gladiator.NeuralInputsAndOutputsString(neuralInputs, neuralOutputs) + "\n")
+
+class Swarmling(Gladiator):
+    def __init__(self, x, y):
+        Gladiator.__init__(self, x, y)
+        self.color = self.defaultColor = (80, 80, 80)
+        self.outerRadius = 160
+        self.innerRadius = 20
+        self.angle = self.id
+        self.detectableClasses = ["Swarmling", "AI"]
+
+    def GetNeuralOutputs(self):
+        v = Point(math.cos(self.angle), math.sin(self.angle))
+        threshold = 0.4
+        a = [
+            v.x < -threshold,
+            v.x > threshold,
+            v.y < -threshold,
+            v.y > threshold
+        ]
+        stateId = self.StateNameToStateId(self.nextStateName if self.nextStateName is not None else self.state)
+        a.extend(Binary(stateId, self.StateCountBinaryDigits(), True))
+        return a        
+
+    def UpdateNormal(self):
+        entities = self.GetAllDetectableInstances()
+        for entity in entities:
+            if entity.__class__.__name__ == self.__class__.__name__:
+                d2 = (entity - self).lengthSq
+                if d2 <= self.outerRadius**2:
+                    self.angle += AngleDiff(self.angle, entity.v.radians)/40
+                if d2 <= self.innerRadius**2:
+                    self.angle += ((entity - self).radians + math.pi - self.angle) / 4
+            else:
+                d2 = (entity - self).lengthSq
+                if d2 <= self.outerRadius**2:
+                    self.angle = (entity - self).radians + math.pi
+                
+        self.UpdatePosition(0.9)
+
+    def Render(self):
+        neuralOutputs = self.GetNeuralOutputs()
+        self.ExecuteOutputs(neuralOutputs)
+        Gladiator.Render(self)      
         
 
 class AI(Gladiator):
 
-    def __init__(self, x, y, teacher=None, nn=None):
+    def __init__(self, x, y, teachers=None, nn=None):
         Gladiator.__init__(self, x, y)
         self.color = self.defaultColor = (0, 128, 255)
-        self.detectableClasses = ["Player", "AI"]
-        self.dummy = False
+        self.detectableClasses = ["Player", "AI", "Swarmling"]
 
         self.nn = nn
-        self.teacher = teacher
+        self.teachers = teachers if teachers is not None else []
         self.lastLessons = []
 
-        if self.teacher is not None:
-            self.LearnFromTeacher()
+        if len(self.teachers) > 0:
+            self.LearnFromTeachers()
         else:
-            self.InitializeNeuralNetwork("LastNeuralNetwork")
+            self.InitializeNeuralNetwork("hivemind")
 
     def UpdateNormal(self):
-
-        players = Entity.GetAllEntitiesOfType("Player")
-        for player in players:
-            if self.collides(player):
-                self.SetState("hit")
-
-        if self.dummy:
-            return
-        
         self.ExecuteOutputs(self.GetNeuralOutputs())
-        self.LearnFromTeacher()
+        self.LearnFromTeachers()
         self.UpdatePosition(0.9)
-
-    def Render(self):
-        Gladiator.Render(self)
 
     def GetNeuralOutputs(self):
         return self.GetNeuralOutputsFromInputs(self.GetNeuralInputs())
@@ -232,9 +288,9 @@ class AI(Gladiator):
                     return False
         return True
 
-    def LearnFromTeacher(self):
-        if self.teacher is not None:
-            self.LearnLesson(self.teacher.GetNeuralInputs(), self.teacher.GetNeuralOutputs())
+    def LearnFromTeachers(self):
+        for teacher in self.teachers:
+            self.LearnLesson(teacher.GetNeuralInputs(), teacher.GetNeuralOutputs())
     
     def TrainOnSingleTest(self, singleInput, singleOutput):
         self.nn.train([[singleInput, singleOutput]], 10, 10, 0.01)
