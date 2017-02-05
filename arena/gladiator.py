@@ -1,5 +1,5 @@
 from basics import *
-import pygame, math, os
+import pygame, math, os, random
 
 class Gladiator(Entity):
 
@@ -8,7 +8,7 @@ class Gladiator(Entity):
         self.color = self.defaultColor = (255, 255, 255)
         self.radius = 16
         self.speedDash = 20
-        self.speedNormal = 4
+        self.speedNormal = 2 + random.random()
         self.detectableClasses = []
         
         self.AddState("normal", self.UpdateNormal)
@@ -34,31 +34,34 @@ class Gladiator(Entity):
         self.hitTimer = 0
 
     def UpdateStunned(self):
-        self.v = self.speedNormal * self.v.normalized
+        self.v = self.speedNormal * (self.v.normalized if self.v.lengthSq > 0 else Point(1, 0))
         self.v.radians += 1
 
     def UpdateDash(self):
-        self.UpdatePosition(0.95)
+        self.UpdatePosition(0.9)
 
-        entities = self.GetAllDetectableInstances()
-        for entity in entities:
-            if self.collides(entity):
-                #d = self - entity
-                #v = Point(self.radius + entity.radius - d.length, 0)
-                #v.radians = d.radians
-                #self.v += v
-                #entity.v -= v
-                entity.SetState("hit")
+        # entities = self.GetAllDetectableInstances()
+        # for entity in entities:
+        #     if self.collides(entity):
+        #         #d = self - entity
+        #         #v = Point(self.radius + entity.radius - d.length, 0)
+        #         #v.radians = d.radians
+        #         #self.v += v
+        #         #entity.v -= v
+        #         entity.SetState("hit")
         
-        if self.v.lengthSq <= 8**2:
+        if self.v.lengthSq <= (4 * self.speedNormal)**2:
             self.SetState("normal")
 
     def BeginDash(self):
         self.v = max(self.v.length, self.speedDash) * self.v.normalized
 
     def Render(self):
-        radius = self.radius * max(0.5, 1 - self.v.lengthSq / self.speedDash**2)
-        Screen.DrawCircle(self, radius, self.color)
+        radius = self.radius * max(0.8, 1 - self.v.lengthSq / self.speedDash**2)
+        if self.currStateName == "dash":
+            Screen.DrawCircle(self, radius, (min(self.color[0] + 50, 255), min(self.color[1] + 50, 255), min(self.color[2] + 50, 255)))
+        else:
+            Screen.DrawCircle(self, radius, self.color)
         Screen.DrawLine(self, self + self.v.normalized * radius * 1.05, (max(self.color[0] - 40, 0), max(self.color[1] - 40, 0), max(self.color[2] - 40, 0)), 3)
         #self.RenderNeuralInputs(36, 1000)
 
@@ -73,19 +76,22 @@ class Gladiator(Entity):
         self.x = min(max(self.x % Screen.Instance.width, 0), Screen.Instance.width)
         self.y = min(max(self.y % Screen.Instance.height, 0), Screen.Instance.height)
 
-    def ExecuteOutputs(self, outputs):
-        acc = 3
-        if outputs[0] > 0.5:
+    def ExecuteDirectionalOutputs(self, directionalOutputs):
+        acc = self.speedNormal * 2
+        if directionalOutputs[0] > 0.5:
             self.v.x -= acc
-        if outputs[1] > 0.5:
+        if directionalOutputs[1] > 0.5:
             self.v.x += acc
-        if outputs[2] > 0.5:
+        if directionalOutputs[2] > 0.5:
             self.v.y -= acc
-        if outputs[3] > 0.5:
+        if directionalOutputs[3] > 0.5:
             self.v.y += acc
 
+    def ExecuteOutputs(self, outputs):
+        self.ExecuteDirectionalOutputs(outputs)
+
         if self.v.lengthSq >= self.speedNormal**2:
-            self.v = max(self.speedNormal*self.v.normalized, 0.9 * self.v)
+            self.v = max(self.speedNormal*self.v.normalized, 0.75 * self.v)
 
         stateIndexStart = 4
         stateCountBinaryDigits = self.StateCountBinaryDigits()
@@ -143,9 +149,9 @@ class Gladiator(Entity):
 
         sweep = self.RadialSweep(lines, length)
         for point, entity in zip(sweep[0], sweep[1]):
-            neuralInputs.append(max(1 - (point - self).length / 160, 0))
+            neuralInputs.append(max(1 - (point - self).length / 80, 0))
             neuralInputs.append((entity.__class__.__name__ == self.__class__.__name__) if entity is not None else False)
-            neuralInputs.extend(Gladiator.AngleToDirectionalOutput(entity.v.radians if entity is not None else 0))
+            neuralInputs.extend(Gladiator.AngleToDirectionalOutput(entity.v.radians if entity is not None else None))
         return neuralInputs
 
     def RenderNeuralInputs(self, lines, length):
@@ -154,7 +160,7 @@ class Gladiator(Entity):
 
     @staticmethod
     def AngleToDirectionalOutput(radians):
-        v = Point(math.cos(radians), math.sin(radians))
+        v = Point(math.cos(radians), math.sin(radians)) if radians is not None else Point()
         threshold = 0.4
         a = [
             v.x < -threshold,
@@ -212,7 +218,7 @@ class Swarmling(Gladiator):
     def __init__(self, x, y):
         Gladiator.__init__(self, x, y)
         self.color = self.defaultColor = (80, 80, 80)
-        self.outerRadius = 160
+        self.outerRadius = 80
         self.innerRadius = 20
         self.angle = self.id
         self.detectableClasses = ["Swarmling", "AI"]
@@ -221,27 +227,43 @@ class Swarmling(Gladiator):
         a = Gladiator.AngleToDirectionalOutput(self.angle)
         stateId = self.StateNameToStateId(self.nextStateName if self.nextStateName is not None else self.state)
         a.extend(Binary(stateId, self.StateCountBinaryDigits(), True))
-        return a        
+        return a
 
     def UpdateNormal(self):
         entities = self.GetAllDetectableInstances()
+        friends = []
+        enemies = []
         for entity in entities:
             if entity.__class__.__name__ == self.__class__.__name__:
-                d2 = (entity - self).lengthSq
-                if d2 <= self.outerRadius**2:
-                    self.angle += AngleDiff(self.angle, entity.v.radians)/40
-                if d2 <= self.innerRadius**2:
-                    self.angle += ((entity - self).radians + math.pi - self.angle) / 4
+                friends.append(entity)
             else:
-                d2 = (entity - self).lengthSq
-                if d2 <= self.outerRadius**2:
-                    self.angle = (entity - self).radians + math.pi
+                enemies.append(entity)
+
+        for friend in friends:
+            d2 = (friend - self).lengthSq
+            if d2 <= self.innerRadius ** 2:
+                self.angle += AngleDiff(self.angle, friend.v.radians) / 4
+            elif d2 <= self.outerRadius ** 2:
+                self.angle += friend.v.radians / len(friends)
+
+        #self.angle += AngleDiff(self.angle, (Screen.Instance.MousePosition() - self).radians) / 2
+
+        for enemy in enemies:
+            d2 = (enemy - self).lengthSq
+            if d2 <= self.outerRadius**2:
+                self.angle = (enemy - self).radians + math.pi
+            if d2 <= self.innerRadius**2:
+                outputs = Gladiator.AngleToDirectionalOutput(self.angle)
+                self.v.x = self.v.y = 0
+                self.ExecuteDirectionalOutputs(outputs)
+                self.SetState("dash")
                 
         self.UpdatePosition(0.9)
 
     def Render(self):
-        neuralOutputs = self.GetNeuralOutputs()
-        self.ExecuteOutputs(neuralOutputs)
+        if self.currStateName == "normal":
+            neuralOutputs = self.GetNeuralOutputs()
+            self.ExecuteOutputs(neuralOutputs)
         Gladiator.Render(self)      
         
 
@@ -257,6 +279,7 @@ class AI(Gladiator):
         self.nn = nn
         self.teachers = teachers if teachers is not None else []
         self.lastLessons = []
+        self.LearnFromTeachers()
 
     def UpdateNormal(self):
         self.LearnFromTeachers()

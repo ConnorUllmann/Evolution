@@ -159,10 +159,10 @@ def TorquePullVector(centerOfMass, forcePosition, forceVector):
 
 def AngleDiff(a, b):
     diff = b - a
-    while diff > 180:
-        diff -= 360
-    while diff <= -180:
-        diff += 360
+    while diff > pi:
+        diff -= 2*pi
+    while diff <= -pi:
+        diff += 2*pi
     return diff
 
 def Binary(x, digits=-1, asList=False):

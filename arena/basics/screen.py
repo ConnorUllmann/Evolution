@@ -1,6 +1,6 @@
 import pygame, time, os, platform
 from tkinter import *
-from random import randint
+from random import randint, random
 from .thread_manager import ThreadManager
 from .point import Point
 
@@ -205,7 +205,7 @@ class Screen:
 
     @staticmethod
     def DrawLines(positions, color=(255, 255, 255), thickness=1):
-        if camera.x != 0 or camera.y != 0:
+        if Screen.Instance.camera.x != 0 or Screen.Instance.camera.y != 0:
             p = []
             for x in positions:
                 p.append((x[0] - Screen.Instance.camera.x, x[1] - Screen.Instance.camera.y))
@@ -239,3 +239,6 @@ class Screen:
     def MousePosition(self):
         p = pygame.mouse.get_pos()
         return Point(p[0], p[1])
+
+    def RandomPosition(self):
+        return Point(random() * Screen.Instance.width, random() * Screen.Instance.height)
