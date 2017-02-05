@@ -325,7 +325,7 @@ class AI(Gladiator):
             self.LearnLesson(teacher.GetNeuralInputs(), teacher.GetNeuralOutputs())
     
     def TrainOnSingleTest(self, singleInput, singleOutput):
-        self.nn.train([[singleInput, singleOutput]], 10, 10, 0.01)
+        self.nn.train([[singleInput, singleOutput]], 10, 10, 0.025)
 
     def TestsToBatches(self, tests, batchSize=30):
         batches = []

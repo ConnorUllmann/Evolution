@@ -8,6 +8,8 @@ def PreGame():
 queen = None
 hivemind = None
 player = None
+saveTimer = 0
+saveTimerMax = 10
 
 def GenerateAIs():
     global hivemind, queen
@@ -30,14 +32,22 @@ def GenerateAIs():
         AI(p.x, p.y, None, hivemind)
 
 def UpdateGame():
-    global firstFrameTriggered, hivemind, queen
+    global firstFrameTriggered, hivemind, queen, saveTimer, saveTimerMax
     
     if firstFrameTriggered is False:
         FirstFrame()
         firstFrameTriggered = True
 
-    if hivemind is not None:
-        hivemind.save("hivemind")
+    if saveTimer > 0:
+        saveTimer -= 1
+    else:
+        saveTimer = saveTimerMax
+        if hivemind is not None:
+            hivemind.save("hivemind")
+            try:
+                NeuralNetwork.Load("hivemind")
+            except:
+                hivemind.save("hivemind-onerror")
 
 def RenderGame():
     pass
@@ -49,8 +59,8 @@ def FirstFrame():
     GenerateAIs()
     
 def StartGame():
-    Screen(1200, 750)
-    #Screen(600, 400)
+    #Screen(1200, 750)
+    Screen(700, 500)
     PreGame()
     Screen.Instance.AddUpdateFunction("main", UpdateGame)
     Screen.Instance.AddRenderFunction("main", RenderGame)
