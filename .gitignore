@@ -6,3 +6,5 @@ __pycache__/body.cpython-35.pyc
 *.pyc
 
 arena/.idea/workspace.xml
+
+arena/.idea/misc.xml
