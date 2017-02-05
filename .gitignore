@@ -1,5 +1,3 @@
 *.pyc
 
-arena/.idea/workspace.xml
-
-arena/.idea/misc.xml
+arena/.idea/*
