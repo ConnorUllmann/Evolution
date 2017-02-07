@@ -141,7 +141,7 @@ class Gladiator(Entity):
         stateId = self.StateNameToStateId(self.state)
         if stateId is None:
             stateId = 0
-        neuralInputs = [self.v.x < -1, self.v.x > 1, self.v.y < -1, self.v.y > 1]
+        neuralInputs = Gladiator.AngleToDirectionalOutput(self.v.radians)
         neuralInputs.extend(Binary(stateId, self.StateCountBinaryDigits(), True))
 
         if len(self.detectableClasses) <= 0:
@@ -149,7 +149,7 @@ class Gladiator(Entity):
 
         sweep = self.RadialSweep(lines, length)
         for point, entity in zip(sweep[0], sweep[1]):
-            neuralInputs.append(max(1 - (point - self).length / 80, 0))
+            neuralInputs.append(max(1 - (point - self).length / 160, 0))
             neuralInputs.append((entity.__class__.__name__ == self.__class__.__name__) if entity is not None else False)
             neuralInputs.extend(Gladiator.AngleToDirectionalOutput(entity.v.radians if entity is not None else None))
         return neuralInputs
@@ -242,11 +242,11 @@ class Swarmling(Gladiator):
         for friend in friends:
             d2 = (friend - self).lengthSq
             if d2 <= self.innerRadius ** 2:
-                self.angle += AngleDiff(self.angle, friend.v.radians) / 4
+                self.angle += AngleDiff(self.angle, (self - friend).radians) / 4
             elif d2 <= self.outerRadius ** 2:
-                self.angle += friend.v.radians / len(friends)
+                self.angle += AngleDiff(self.angle, friend.v.radians) / 4
 
-        #self.angle += AngleDiff(self.angle, (Screen.Instance.MousePosition() - self).radians) / 2
+        #self.angle += AngleDiff(self.angle, (Screen.Instance.MousePosition() - self).radians) / 4
 
         for enemy in enemies:
             d2 = (enemy - self).lengthSq
