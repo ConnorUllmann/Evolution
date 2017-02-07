@@ -14,8 +14,11 @@ saveTimerMax = 10
 def GenerateAIs():
     global hivemind, queen
     swarmlings = []
-    disrupter = Swarmling(Screen.Instance.width/2, Screen.Instance.height/2)
-    disrupter.SetState("stunned")
+    disrupters = []
+    for i in range(5):
+        disrupters.append(Swarmling(Screen.Instance.width/2 + 200 * int(i == 1) - 200 * int(i == 2), Screen.Instance.height/2 + 200 * int(i == 3) - 200 * int(i == 4)))
+        disrupters[-1].SetState("stunned")
+
     for i in range(15):
         p = Screen.Instance.RandomPosition()
         swarmlings.append(Swarmling(p.x, p.y))
