@@ -8,9 +8,11 @@ class Point:
     def Clone(a):
         return Point(a.x, a.y)
 
-    def __init__(self, x=0, y=0):
+    def __init__(self, x=0, y=0, integer=False):
+        self.integer = bool(integer)
         self.x = x
         self.y = y
+        self.iter_index = 0
 
     @property
     def normalized(self):
@@ -31,10 +33,10 @@ class Point:
         return int(self.length)
 
     def dot(self, other):
-        return self.x * other.x + self.y * other.y
+        return self.x * other[0] + self.y * other[1]
 
     def cross(self, other):
-        return self.x * other.y - self.y * other.x
+        return self.x * other[1] - self.y * other[0]
 
     def proj(self, other):
         return self.dot(other) / other.lengthSq * other
@@ -42,6 +44,22 @@ class Point:
     def reflect(self, normal):
         n = Point(normal.y, -normal.x)
         return self - 2 * self.dot(n) / n.lengthSq * n
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, _x):
+        self._x = int(round(_x)) if self.integer else _x
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, _y):
+        self._y = int(round(_y)) if self.integer else _y
 
     @property
     def radians(self):
@@ -84,14 +102,14 @@ class Point:
         return Point(abs(self.x), abs(self.y))
 
     def __add__(self, other):
-        return Point(self.x + other.x, self.y + other.y)
+        return Point(self.x + other[0], self.y + other[1])
 
     def __sub__(self, other):
-        return Point(self.x - other.x, self.y - other.y)
+        return Point(self.x - other[0], self.y - other[1])
 
     def __mul__(self, other):
         if isinstance(other, self.__class__):
-            return Point(self.x * other.x, self.y * other.y)
+            return Point(self.x * other[0], self.y * other[1])
         else:
             return Point(self.x * other, self.y * other)
 
@@ -103,13 +121,13 @@ class Point:
 
     def __truediv__(self, other):
         if isinstance(other, self.__class__):
-            return Point(self.x / other.x, self.y / other.y)
+            return Point(self.x / other[0], self.y / other[1])
         else:
             return Point(self.x / other, self.y / other)
 
     def __rtruediv__(self, other):
         if isinstance(other, self.__class__):
-            return Point(other.x / self.x, other.y / self.y)
+            return Point(other[0] / self.x, other[1] / self.y)
         else:
             return Point(other / self.x, other / self.y)
 
@@ -142,6 +160,17 @@ class Point:
 
     def __ne__(self, other):
         return not (self == other)
+
+    def __iter__(self):
+         return self
+
+    def __next__(self):
+        if self.iter_index == 2:
+            self.iter_index = 0
+            raise StopIteration
+        v = self[self.iter_index]
+        self.iter_index += 1
+        return v
 
     def __getitem__(self, index):
         if index == 0:
