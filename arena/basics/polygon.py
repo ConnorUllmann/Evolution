@@ -60,6 +60,7 @@ class PolygonEntity(Polygon, Entity):
 
     def TraverseHandoff(self, other, index, verticesA, verticesB, polygonPoints, nowInside, uncheckedA, uncheckedB):
         i = index
+        polygon = polygonPoints[-1]
         while True:
             a = verticesA[i%len(verticesA)]
             b = verticesA[(i+1)%len(verticesA)]
@@ -73,9 +74,9 @@ class PolygonEntity(Polygon, Entity):
             if nowInside is None:
                 nowInside = other.contains(a)
                 if nowInside:
-                    polygonPoints[-1].append(a)
+                    polygon.append(a)
             else:
-                finishedPolygon = len(polygonPoints[-1]) > 0 and a == polygonPoints[-1][0]
+                finishedPolygon = len(polygon) > 0 and a == polygon[0]
                 if finishedPolygon:
                     if len(uncheckedA) > 0:
                         return self.TraverseHandoff(other, verticesA.index(uncheckedA.pop(0)), verticesA, verticesB, polygonPoints+[[]], None, uncheckedA, uncheckedB)
@@ -86,12 +87,11 @@ class PolygonEntity(Polygon, Entity):
                 wasInside = nowInside
                 nowInside = other.contains(c)
                 if nowInside:
-                    polygonPoints[-1].append(a)
+                    polygon.append(a)
                 elif wasInside:
                     if a in verticesB:
                         return other.TraverseHandoff(self, verticesB.index(a), verticesB, verticesA, polygonPoints, False, uncheckedB, uncheckedA)
             i += 1
-        return polygonPoints
 
     def IntersectionPolygon(self, other, color):
 
