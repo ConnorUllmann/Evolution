@@ -55,10 +55,10 @@ class PolygonEntity(Polygon, Entity):
             allIntersectionPoints.extend(intersectionPoints)
         return allIntersectionPoints
 
-    def Traverse(self, other, verticesA, verticesB):
-        return self.TraverseHandoff(other, 0, verticesA, verticesB, [[]], 0, None, Drawable(self.vertices, self), Drawable(other.vertices, other))
+    def Traverse(self, other):
+        return self.TraverseHandoff(other, 0, self.VerticesWithIntersectionPoints(other), other.VerticesWithIntersectionPoints(self), [[]], None, Drawable(self.vertices, self), Drawable(other.vertices, other))
 
-    def TraverseHandoff(self, other, index, verticesA, verticesB, polygonPoints, polygonIndex, nowInside, uncheckedA, uncheckedB):
+    def TraverseHandoff(self, other, index, verticesA, verticesB, polygonPoints, nowInside, uncheckedA, uncheckedB):
         i = index
         while True:
             a = verticesA[i%len(verticesA)]
@@ -73,31 +73,29 @@ class PolygonEntity(Polygon, Entity):
             if nowInside is None:
                 nowInside = other.contains(a)
                 if nowInside:
-                    polygonPoints[polygonIndex].append(a)
+                    polygonPoints[-1].append(a)
             else:
-                finishedPolygon = len(polygonPoints[polygonIndex]) > 0 and a == polygonPoints[polygonIndex][0]
+                finishedPolygon = len(polygonPoints[-1]) > 0 and a == polygonPoints[-1][0]
                 if finishedPolygon:
                     if len(uncheckedA) > 0:
-                        return self.TraverseHandoff(other, verticesA.index(uncheckedA.pop(0)), verticesA, verticesB, polygonPoints+[[]], polygonIndex+1, None, uncheckedA, uncheckedB)
+                        return self.TraverseHandoff(other, verticesA.index(uncheckedA.pop(0)), verticesA, verticesB, polygonPoints+[[]], None, uncheckedA, uncheckedB)
                     if len(uncheckedB) > 0:
-                        return other.TraverseHandoff(self, verticesB.index(uncheckedB.pop(0)), verticesB, verticesA, polygonPoints+[[]], polygonIndex+1, None, uncheckedB, uncheckedA)
+                        return other.TraverseHandoff(self, verticesB.index(uncheckedB.pop(0)), verticesB, verticesA, polygonPoints+[[]], None, uncheckedB, uncheckedA)
                     return polygonPoints
 
                 wasInside = nowInside
                 nowInside = other.contains(c)
                 if nowInside:
-                    polygonPoints[polygonIndex].append(a)
+                    polygonPoints[-1].append(a)
                 elif wasInside:
                     if a in verticesB:
-                        return other.TraverseHandoff(self, verticesB.index(a), verticesB, verticesA, polygonPoints, polygonIndex, False, uncheckedB, uncheckedA)
+                        return other.TraverseHandoff(self, verticesB.index(a), verticesB, verticesA, polygonPoints, False, uncheckedB, uncheckedA)
             i += 1
         return polygonPoints
 
     def IntersectionPolygon(self, other, color):
-        verticesA = self.VerticesWithIntersectionPoints(other)
-        verticesB = other.VerticesWithIntersectionPoints(self)
 
-        polygonsPoints = self.Traverse(other, verticesA, verticesB)
+        polygonsPoints = self.Traverse(other)
 
         s = ""
         for polygonPoints in polygonsPoints:
@@ -105,7 +103,7 @@ class PolygonEntity(Polygon, Entity):
             for pt in polygonPoints:
                 s += "(" + str(int(pt.x)) + ", " + str(int(pt.y)) + ")"
             s += "\n"
-        print("intersectionPolygon[{}] len(verticesA)={}, poly points={}".format(len(polygonPoints), len(verticesA), s))
+        print("intersectionPolygon[{}] poly points={}".format(len(polygonPoints), s))
 
         print(len(polygonsPoints))
         for polygonVertices in polygonsPoints:
