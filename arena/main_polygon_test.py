@@ -21,6 +21,7 @@ def BeginGame():
         Point(240, 380, True),
         Point(300, 280, True),
         Point(140, 280, True),
+        Point(140, 260, True),
         Point(200, 200, True),
         Point(220, 100, True)
     ]
@@ -38,7 +39,7 @@ def UpdateGame():
 
     p = Point(100, 0)
     if Screen.KeyDown(pygame.K_SPACE):
-        angle += 0.01
+        angle += 0.02
     p.radians = angle
     B.x = 50 + p.x
     B.y = 20 + p.y
@@ -46,7 +47,7 @@ def UpdateGame():
 def RenderGame():
     global A, B
     A.IntersectionPolygon(B, (255, 255, 0))
-    B.IntersectionPolygon(A, (255, 0, 0))
+    #B.IntersectionPolygon(A, (255, 0, 0))
 
 def StartGame():
     Screen(640, 480)
