@@ -41,6 +41,14 @@ class Entity(StateMachine, Point):
             return True
         return False
 
+    @property
+    def position(self):
+        return self
+
+    @position.setter
+    def position(self, point):
+        self = point
+
     def __init__(self, x=0, y=0):
         Point.__init__(self, x, y)
         StateMachine.__init__(self)

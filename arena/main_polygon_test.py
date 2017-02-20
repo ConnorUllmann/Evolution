@@ -3,82 +3,63 @@ import pygame
 from time import time
 from math import pi
 from random import random
-
+import random
 
 def PreGame():
+    random.seed(5)
     pygame.display.set_caption("Polygon Intersection Test")
 
+def GeneratePolygon():
+    vertices = []
+    angle = 0
+    while angle < 2 * pi:
+        length = random.random() * 250 + 50
+        angle = min(angle + random.random() * 0.5, 2*pi)
+        point = Point(length, 0)
+        point.radians = angle
+        vertices.append(point)
+    return vertices
+
+merge = True
 A = None
 B = None
+C = None
 def BeginGame():
-    global A, B
-    # verticesA = [
-    #     # Point(100, 100, True),
-    #     # Point(300, 100, True),
-    #     # Point(200, 300, True)
-    #     Point(300, 400, True),
-    #     Point(100, 100, True),
-    #     Point(380, 300, True)
-    # ]
-    # verticesB = [
-    #     # Point(200, 50, True),
-    #     # Point(300, 400, True),
-    #     # Point(100, 400, True)
-    #     Point(400, 300, True),
-    #     Point(240, 380, True),
-    #     Point(300, 280, True),
-    #     Point(140, 280, True),
-    #     Point(140, 260, True),
-    #     Point(200, 200, True),
-    #     Point(220, 100, True)
-    # ]
-
-    verticesA = []
-    angle = 0
-    while angle < 2 * pi:
-        length = random() * 250 + 50
-        angle += random() * 0.5
-        point = Point(length, 0)
-        point.radians = angle
-        verticesA.append(point)
-
-    verticesB = []
-    angle = 0
-    while angle < 2 * pi:
-        length = random() * 290 + 10
-        angle += random() * 0.5
-        point = Point(length, 0)
-        point.radians = angle
-        verticesB.append(point)
-
-    A = PolygonEntity(400, 400, verticesA, (128, 255, 128))
-    B = PolygonEntity(400, 400, verticesB, (128, 128, 255))
+    global A, B, C, D, E
+    A = PolygonEntity(400, 400, GeneratePolygon(), (128, 255, 128))
+    B = PolygonEntity(400, 400, GeneratePolygon(), (128, 128, 255))
+    C = PolygonEntity(400, 400, GeneratePolygon(), (255, 128, 128))
+    D = PolygonEntity(400, 400, GeneratePolygon(), (255, 128, 255))
+    E = PolygonEntity(400, 400, GeneratePolygon(), (128, 255, 255))
 
 firstFrameTriggered = False
 angle = 0
 def UpdateGame():
-    global firstFrameTriggered, A, B, angle
+    global firstFrameTriggered, A, B, C, D, E, angle, merge
     if not firstFrameTriggered:
         BeginGame()
         firstFrameTriggered = True
 
     p = Point(100, 0)
-    #if Screen.KeyDown(pygame.K_SPACE):
-    angle -= 0.05
-    p.radians = angle
+    if Screen.KeyReleased(pygame.K_SPACE):
+        A.visible = not A.visible
+        B.visible = not B.visible
+    if Screen.KeyReleased(pygame.K_x):
+        merge = not merge
+    if Screen.KeyReleased(pygame.K_z):
+        if merge:
+            PolygonEntity.Merge(A, B, C, D, E)
+        else:
+            PolygonEntity.IntersectionPolygon(A, B, C)
 
-    midPt = Point()
-    for pt in A.vertices:
-        midPt += pt
-    midPt /= len(A.vertices)
-    for pt in A.vertices:
-        pt.rotateRadians(0.03, midPt)
+    #angle -= 0.05
+    #p.radians = angle
+    #A.rotateRadians(0.03)
     B.x = 300 + p.x
     B.y = 400 + p.y
 
 def RenderGame():
-    global A, B
-    A.IntersectionPolygon(B, (255, 255, 0))
+    global A, B, C, merge
     #input("Waiting")
     #B.IntersectionPolygon(A, (255, 0, 0))
 
