@@ -37,34 +37,23 @@ class Polygon:
 
 class PolygonEntity(Polygon, Entity):
 
-    def contains2(self, point):
-        start = Point(-10**9, -10**9)
-        intersectionPoints = []
-        for i in range(len(self.vertices)):
-            a = self + self.vertices[i]
-            b = self + self.vertices[(i+1)%len(self.vertices)]
-            p = LinesIntersectionPoint(a, b, start, point, True)
-            if p is not None:
-                intersectionPoints.append(p)
-        return len(intersectionPoints) % 2
-
-    def contains(self, point):
+    def contains(self, point, offset):
         total = 0
         for i in range(len(self.vertices)):
-            a = self + self.vertices[i] - point
-            b = self + self.vertices[(i+1)%len(self.vertices)] - point
+            a = offset + self.vertices[i] - point
+            b = offset + self.vertices[(i+1)%len(self.vertices)] - point
             total += AngleDiff(a.radians, b.radians)
         return abs(total) > 0.001
 
-    def AbsolutePolygonPointPositionsWithIntersections(self, other):
+    def AbsolutePolygonPointPositionsWithIntersections(self, other, offsetA, offsetB):
         allIntersectionPoints = []
         for i in range(len(self.vertices)):
-            a = self + self.vertices[i]
-            b = self + self.vertices[(i+1)%len(self.vertices)]
+            a = offsetA + self.vertices[i]
+            b = offsetA + self.vertices[(i+1)%len(self.vertices)]
             intersectionPoints = []
             for j in range(len(other.vertices)):
-                m = other + other.vertices[j]
-                n = other + other.vertices[(j+1)%len(other.vertices)]
+                m = offsetB + other.vertices[j]
+                n = offsetB + other.vertices[(j+1)%len(other.vertices)]
                 p = LinesIntersectionPoint(a, b, m, n, True)
                 if p is not None:
                     intersectionPoints.append(p)
@@ -73,100 +62,13 @@ class PolygonEntity(Polygon, Entity):
             allIntersectionPoints.extend(intersectionPoints)
         return allIntersectionPoints
 
-    #Returns list of polygons formed by the intersection or the merging of two polygons (depending on the boolean "merge" property)
+    #Returns list of polygon point sets formed by the intersection or the merging of two polygons (depending on the boolean "merge" property)
     @staticmethod
     def Traverse(merge, A, B):
-        polygonPoints = PolygonEntity.TraverseHandoff(merge, A, B, A.AbsolutePolygonPointPositionsWithIntersections(B), B.AbsolutePolygonPointPositionsWithIntersections(A), Drawable(A.vertices, A)[:-1], Drawable(B.vertices, B)[:-1], [], 0, [[]], None)
+        polygonPoints = PolygonEntity.TraverseHandoff(merge, A, B, A.AbsolutePolygonPointPositionsWithIntersections(B, A, B), B.AbsolutePolygonPointPositionsWithIntersections(A, B, A), Drawable(A.vertices, A)[:-1], Drawable(B.vertices, B)[:-1], [], 0, [[]], None)
         if len(polygonPoints) > 0 and len(polygonPoints[-1]) <= 0:
             polygonPoints = polygonPoints[:-1]
         return polygonPoints
-
-    def TraverseHandoffVerbose(self, other, index, verticesA, verticesB, polygonPoints, nowInside, uncheckedA, uncheckedB, addedIntersections):
-        debug = False
-        nameA = "A" if self.color==(128, 255, 128) else "B"
-        nameB = "B" if nameA == "A" else "A"
-        i = index
-        polygon = polygonPoints[-1]
-        while True:
-            a = verticesA[i%len(verticesA)]
-            b = verticesA[(i+1)%len(verticesA)]
-            c = (a + b)/2
-
-            if debug:
-                print("{}{}".format(nameA, i%len(verticesA)))
-
-            if a in uncheckedA:
-                if debug:
-                    print("{}{} removed from unchecked{} index:{}".format(nameA, i%len(verticesA), nameA, uncheckedA.index(a)))
-                uncheckedA.remove(a)
-            if a in uncheckedB:
-                if debug:
-                    print("{}{} removed from unchecked{} index:{}".format(nameA, i%len(verticesA), nameB, uncheckedB.index(a)))
-                uncheckedB.remove(a)
-
-            if nowInside is None:
-                if other.contains(a):
-                    if debug:
-                        print("added {}{} to polygon {}".format(nameA, i%len(verticesA), polygonPoints.index(polygon)))
-                    polygon.append(a)
-                nowInside = other.contains(c)
-            else:
-                finishedPolygon = len(polygon) > 0 and a == polygon[0]
-                if finishedPolygon:
-                    if debug:
-                        print("(new polygon) unchecked ([{}]{} [{}]{})".format(len(uncheckedA), nameA, len(uncheckedB), nameB))
-                        for ptA in uncheckedA:
-                            print(" {}{}".format(nameA, verticesA.index(ptA)))
-                        print(" --- ")
-                        for ptB in uncheckedB:
-                            print(" {}{}".format(nameB, verticesB.index(ptB)))
-                    if len(uncheckedA) > 0:
-                        return self.TraverseHandoff(other, verticesA.index(uncheckedA[0]), verticesA, verticesB, polygonPoints+[[]], None, uncheckedA, uncheckedB, addedIntersections)
-                    if len(uncheckedB) > 0:
-                        return other.TraverseHandoff(self, verticesB.index(uncheckedB[0]), verticesB, verticesA, polygonPoints+[[]], None, uncheckedB, uncheckedA, addedIntersections)
-                    return polygonPoints
-
-                wasInside = nowInside
-                nowInside = other.contains(c)
-                if nowInside:
-                    if debug:
-                        print("added {}{} to polygon {}".format(nameA, i%len(verticesA), polygonPoints.index(polygon)))
-                    if a in addedIntersections:
-                        if debug:
-                            print("unchecked ([{}]{} [{}]{})".format(len(uncheckedA), nameA, len(uncheckedB), nameB))
-                            for ptA in uncheckedA:
-                                print(" {}{}".format(nameA, verticesA.index(ptA)))
-                            print(" --- ")
-                            for ptB in uncheckedB:
-                                print(" {}{}".format(nameB, verticesB.index(ptB)))
-                        if len(uncheckedA) > 0:
-                            return self.TraverseHandoff(other, verticesA.index(uncheckedA[0]), verticesA, verticesB, polygonPoints, None, uncheckedA, uncheckedB, addedIntersections)
-                        if len(uncheckedB) > 0:
-                            return other.TraverseHandoff(self, verticesB.index(uncheckedB[0]), verticesB, verticesA, polygonPoints, None, uncheckedB, uncheckedA, addedIntersections)
-                        return polygonPoints
-                    elif a in verticesA and a in verticesB:
-                        addedIntersections.append(a)
-                    polygon.append(a)
-                elif wasInside:
-                    if a in verticesB:
-                        if debug:
-                            print("handoff to other")
-                        return other.TraverseHandoff(self, verticesB.index(a), verticesB, verticesA, polygonPoints, nowInside, uncheckedB, uncheckedA, addedIntersections)
-                elif len(polygon) <= 0:
-                    if debug:
-                        print("unchecked ([{}]{} [{}]{})".format(len(uncheckedA), nameA, len(uncheckedB), nameB))
-                        for ptA in uncheckedA:
-                            print(" {}{}".format(nameA, verticesA.index(ptA)))
-                        print(" --- ")
-                        for ptB in uncheckedB:
-                            print(" {}{}".format(nameB, verticesB.index(ptB)))
-                    if len(uncheckedA) > 0:
-                        return self.TraverseHandoff(other, verticesA.index(uncheckedA[0]), verticesA, verticesB, polygonPoints, None, uncheckedA, uncheckedB, addedIntersections)
-                    if len(uncheckedB) > 0:
-                        return other.TraverseHandoff(self, verticesB.index(uncheckedB[0]), verticesB, verticesA, polygonPoints, None, uncheckedB, uncheckedA, addedIntersections)
-                    return polygonPoints
-
-            i += 1
 
     @staticmethod
     def TraverseHandoff(merge, A, B, verticesA, verticesB, uncheckedA, uncheckedB, addedIntersections, index, polygonPoints, nowInside):
@@ -185,9 +87,9 @@ class PolygonEntity(Polygon, Entity):
                 uncheckedB.remove(a)
 
             if nowInside is None:
-                if B.contains(a) ^ merge:
+                if B.contains(a, B) ^ merge:
                     polygon.append(a)
-                nowInside = B.contains(c) ^ merge
+                nowInside = B.contains(c, B) ^ merge
             else:
                 finishedPolygon = len(polygon) > 0 and a == polygon[0]
                 if finishedPolygon:
@@ -195,7 +97,7 @@ class PolygonEntity(Polygon, Entity):
                     break
 
                 wasInside = nowInside
-                nowInside = B.contains(c) ^ merge
+                nowInside = B.contains(c, B) ^ merge
                 if nowInside:
                     if a in addedIntersections:
                         break
@@ -216,51 +118,37 @@ class PolygonEntity(Polygon, Entity):
             return PolygonEntity.TraverseHandoff(merge, B, A, verticesB, verticesA, uncheckedB, uncheckedA, addedIntersections, verticesB.index(uncheckedB[0]), polygonPoints, None)
         return polygonPoints
 
-
-    colors = [(255, 255, 0), (0, 255, 255), (255, 0, 255), (255, 0, 0)]
     @staticmethod
-    def IntersectionPolygon(*args):
-        polygonsPoints = PolygonEntity.Traverse(merge, self, other)
-
-        while len(polygonsPoints) > len(PolygonEntity.colors):
-            PolygonEntity.colors.append((randint(0, 255), randint(0, 255), randint(0, 255)))
-        for i in range(len(polygonsPoints)):
-            polygonVertices = polygonsPoints[i]
-            if len(polygonVertices) > 1:
-                Screen.DrawLines(Drawable(polygonVertices), PolygonEntity.colors[i], 2)
-
-    @staticmethod
-    def MergeTwo(A, B):
-        polygonsPoints = PolygonEntity.Traverse(True, A, B)
+    def CombineTwo(merge, A, B):
+        polygonsPoints = PolygonEntity.Traverse(merge, A, B)
         polygons = []
         for polygonPoints in polygonsPoints:
             polygons.append(PolygonEntity.FromAbsoluteCoordinates(polygonPoints, (randint(0, 255), randint(0, 255), randint(0, 255)), 5))
         return polygons
 
-
     @staticmethod
-    def Merge(*args):
-        polygons = PolygonEntity.MergeTwo(args[0], args[1])
+    def Combine(merge, *args):
+        polygons = PolygonEntity.CombineTwo(merge, args[0], args[1])
         for i in range(2, len(args)):
             C = args[i]
             polygonsTemp = []
             for polygon in polygons:
                 polygon.Destroy()
             for polygon in polygons:
-                temp = PolygonEntity.MergeTwo(C, polygon)
+                temp = PolygonEntity.CombineTwo(merge, C, polygon)
                 polygonsTemp.extend(temp)
             polygons = polygonsTemp
         return polygons
 
-    # @staticmethod
-    # def MergedPolygon(*args):
-    #
-    #     while len(polygonsPoints) > len(PolygonEntity.colors):
-    #         PolygonEntity.colors.append((randint(0, 255), randint(0, 255), randint(0, 255)))
-    #     for i in range(len(polygonsPoints)):
-    #         polygonVertices = polygonsPoints[i]
-    #         if len(polygonVertices) > 1:
-    #             Screen.DrawLines(Drawable(polygonVertices), PolygonEntity.colors[i], 2)
+    #Returns the merging of all polygon arguments
+    @staticmethod
+    def Merge(*args):
+        return PolygonEntity.Combine(True, *args)
+
+    #Returns the instersection of all polygon arguments
+    @staticmethod
+    def Intersect(*args):
+        return PolygonEntity.Combine(False, *args)
 
     def __init__(self, x, y, vertices=[], color=(255, 255, 255), thickness=1):
         Polygon.__init__(self, vertices)

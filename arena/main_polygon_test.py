@@ -24,6 +24,9 @@ merge = True
 A = None
 B = None
 C = None
+D = None
+E = None
+combinePolygons = []
 def BeginGame():
     global A, B, C, D, E
     A = PolygonEntity(400, 400, GeneratePolygon(), (128, 255, 128))
@@ -35,7 +38,7 @@ def BeginGame():
 firstFrameTriggered = False
 angle = 0
 def UpdateGame():
-    global firstFrameTriggered, A, B, C, D, E, angle, merge
+    global firstFrameTriggered, A, B, C, D, E, combinePolygons, angle, merge
     if not firstFrameTriggered:
         BeginGame()
         firstFrameTriggered = True
@@ -44,17 +47,23 @@ def UpdateGame():
     if Screen.KeyReleased(pygame.K_SPACE):
         A.visible = not A.visible
         B.visible = not B.visible
+        C.visible = not C.visible
+        D.visible = not D.visible
+        E.visible = not E.visible
     if Screen.KeyReleased(pygame.K_x):
         merge = not merge
-    if Screen.KeyReleased(pygame.K_z):
+    if True:#Screen.KeyReleased(pygame.K_z):
+        if len(combinePolygons) > 0:
+            for polygon in combinePolygons:
+                polygon.Destroy()
         if merge:
-            PolygonEntity.Merge(A, B, C, D, E)
+            combinePolygons = PolygonEntity.Merge(A, B, C, D, E)
         else:
-            PolygonEntity.IntersectionPolygon(A, B, C)
+            combinePolygons = PolygonEntity.Intersect(A, B, C, D, E)
 
-    #angle -= 0.05
-    #p.radians = angle
-    #A.rotateRadians(0.03)
+    angle -= 0.05
+    p.radians = angle
+    A.rotateRadians(0.03)
     B.x = 300 + p.x
     B.y = 400 + p.y
 
