@@ -1,4 +1,4 @@
-from basics import Screen, PolygonEntity, Point
+from basics import Screen, Polygon, PolygonEntity, Point
 import pygame
 from time import time
 from math import pi
@@ -9,7 +9,7 @@ def PreGame():
     random.seed(5)
     pygame.display.set_caption("Polygon Intersection Test")
 
-def GeneratePolygon():
+def GeneratePolygon(x, y):
     vertices = []
     angle = 0
     while angle < 2 * pi:
@@ -18,59 +18,51 @@ def GeneratePolygon():
         point = Point(length, 0)
         point.radians = angle
         vertices.append(point)
-    return vertices
+    return Polygon(x, y, vertices)
 
 merge = True
-A = None
-B = None
-C = None
-D = None
-E = None
+polygons = []
 combinePolygons = []
 def BeginGame():
-    global A, B, C, D, E
-    A = PolygonEntity(400, 400, GeneratePolygon(), (128, 255, 128))
-    B = PolygonEntity(400, 400, GeneratePolygon(), (128, 128, 255))
-    C = PolygonEntity(400, 400, GeneratePolygon(), (255, 128, 128))
-    D = PolygonEntity(400, 400, GeneratePolygon(), (255, 128, 255))
-    E = PolygonEntity(400, 400, GeneratePolygon(), (128, 255, 255))
+    global polygons
+    colors = [
+        (128, 255, 128),
+        (128, 128, 255),
+        (255, 128, 128),
+        (255, 128, 255),
+        (128, 255, 255)
+    ]
+    polygons = []
+    for i in range(3):
+        polygons.append(PolygonEntity(GeneratePolygon(300 + 200 * random.random(), 300 + 200 * random.random()), colors[i%len(colors)]))
 
 firstFrameTriggered = False
 angle = 0
 def UpdateGame():
-    global firstFrameTriggered, A, B, C, D, E, combinePolygons, angle, merge
+    global firstFrameTriggered, polygons, combinePolygons, angle, merge
     if not firstFrameTriggered:
         BeginGame()
         firstFrameTriggered = True
 
-    p = Point(100, 0)
+    if Screen.KeyDown(pygame.K_c):
+        for i in range(len(polygons)):
+            polygons[i].rotateRadians(i / 100)
+
     if Screen.KeyReleased(pygame.K_SPACE):
-        A.visible = not A.visible
-        B.visible = not B.visible
-        C.visible = not C.visible
-        D.visible = not D.visible
-        E.visible = not E.visible
+        for polygon in polygons:
+            polygon.visible = not polygon.visible
     if Screen.KeyReleased(pygame.K_x):
         merge = not merge
     if True:#Screen.KeyReleased(pygame.K_z):
-        if len(combinePolygons) > 0:
-            for polygon in combinePolygons:
-                polygon.Destroy()
         if merge:
-            combinePolygons = PolygonEntity.Merge(A, B, C, D, E)
+            combinePolygons = Polygon.Merge(*polygons)
         else:
-            combinePolygons = PolygonEntity.Intersect(A, B, C, D, E)
-
-    angle -= 0.05
-    p.radians = angle
-    A.rotateRadians(0.03)
-    B.x = 300 + p.x
-    B.y = 400 + p.y
+            combinePolygons = Polygon.Intersect(*polygons)
 
 def RenderGame():
-    global A, B, C, merge
-    #input("Waiting")
-    #B.IntersectionPolygon(A, (255, 0, 0))
+    global combinePolygons
+    for polygon in combinePolygons:
+        polygon.RenderPolygon((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 3)
 
 def StartGame():
     Screen(800, 800)
