@@ -46,14 +46,14 @@ def UpdateGame():
 
     if Screen.KeyDown(pygame.K_c):
         for i in range(len(polygons)):
-            polygons[i].rotateRadians(i / 100)
+            polygons[i].rotateRadians(i / 10)
 
     if Screen.KeyReleased(pygame.K_SPACE):
         for polygon in polygons:
             polygon.visible = not polygon.visible
     if Screen.KeyReleased(pygame.K_x):
         merge = not merge
-    if True:#Screen.KeyReleased(pygame.K_z):
+    if Screen.KeyDown(pygame.K_z):
         if merge:
             combinePolygons = Polygon.Merge(*polygons)
         else:
