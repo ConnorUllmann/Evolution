@@ -6,4 +6,5 @@ from .state_machine import StateMachine
 from .thread_manager import ThreadManager
 from .point import Point
 from .polygon import Polygon, PolygonEntity
+from .color import Color
 from .utils import *

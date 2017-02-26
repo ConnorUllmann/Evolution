@@ -4,9 +4,6 @@ from random import randint, random
 from .thread_manager import ThreadManager
 from .point import Point
 
-def RandomColor():
-    return (randint(0, 255), randint(0, 255), randint(0, 255))
-
 class Screen:
 
     Instance = None
