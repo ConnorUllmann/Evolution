@@ -1,9 +1,10 @@
-from basics import Screen, Polygon, PolygonEntity, Point, Color
+from basics import Screen, Polygon, PolygonEntity, Point, Color, RectanglesCollide
 import pygame
 from time import time
 from math import pi
 from random import random
 import random
+from time import time
 
 def PreGame():
     random.seed(5)
@@ -13,8 +14,8 @@ def GeneratePolygon(x, y):
     vertices = []
     angle = 0
     while angle < 2 * pi:
-        length = random.random() * 200 + 50
-        angle = min(angle + random.random() * 0.2 + 0.1, 2*pi)
+        length = random.random() * 50 + 100
+        angle = min(angle + random.random() * 0.3, 2*pi)
         point = Point(length, 0)
         point.radians = angle
         vertices.append(point)
@@ -22,7 +23,8 @@ def GeneratePolygon(x, y):
 
 merge = True
 polygons = []
-combinePolygons = []
+mergePolygons = []
+intersectPolygons = []
 def BeginGame():
     global polygons, debugPoints
     colors = [
@@ -33,18 +35,18 @@ def BeginGame():
         Color.light_cyan
     ]
 
-    #polygons.append(PolygonEntity(Polygon(200, 200, [Point(-100, 0), Point(100, 0), Point(200, 200)])))
-    #polygons.append(PolygonEntity(Polygon(400, 200, [Point(-100, 0), Point(100, 0), Point(200, 200)])))
+    # polygons.append(PolygonEntity(Polygon(200, 200, [Point(-100, 0), Point(100, 0), Point(0, 200)]), Color.green))
+    # polygons.append(PolygonEntity(Polygon(500, 200, [Point(-100, 0), Point(100, 0), Point(0, 200)]), Color.blue))
     for i in range(2):
         polygons.append(PolygonEntity(GeneratePolygon(300 + 200 * random.random(), 300 + 200 * random.random()), colors[i%len(colors)]))
 
 def RotatePolygons(amount, polygons):
     for i in range(len(polygons)):
-        polygons[i].rotateRadians(amount * (i+1))
+        polygons[i].rotateRadians(amount * (i+1) * (1 if i % 2 else -1))
 
 firstFrameTriggered = False
 def UpdateGame():
-    global firstFrameTriggered, polygons, combinePolygons, merge
+    global firstFrameTriggered, polygons, mergePolygons, intersectPolygons, merge
     if not firstFrameTriggered:
         BeginGame()
         firstFrameTriggered = True
@@ -64,12 +66,23 @@ def UpdateGame():
         print("Merge" if merge else "Intersect")
 
     if Screen.KeyReleased(pygame.K_1) or Screen.KeyDown(pygame.K_0):
-        combinePolygons = Polygon.Merge(polygons[0], polygons[1]) if merge else Polygon.Intersect(polygons[0], polygons[1])
+        mergeStart = time()
+        mergePolygons = Polygon.Merge(polygons[0], polygons[1])
+        intersectPolygons = Polygon.Intersect(polygons[0], polygons[1])
+        mergeDuration = time() - mergeStart
+        print("Merge/intersect duration: {}s = {} frames at 60FPS".format(int(mergeDuration*100)/100, int(mergeDuration*60)))
+
+    polygons[0].x = Screen.Instance.MousePosition().x
+    polygons[0].y = Screen.Instance.MousePosition().y
 
 def RenderGame():
-    global combinePolygons
-    for polygon in combinePolygons:
-        polygon.renderPolygon(Color.white, 4)
+    global mergePolygons, intersectPolygons
+    for polygon in mergePolygons:
+        polygon.renderPolygon(Color.cyan, 4)
+    for polygon in intersectPolygons:
+        polygon.renderPolygon(Color.yellow, 4)
+    if polygons[0].boundingRectsCollide(polygons[1]):
+        polygons[1].renderBoundingRect(Color.red, 6, False)
 
 def StartGame():
     Screen(800, 800)

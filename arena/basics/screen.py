@@ -183,12 +183,12 @@ class Screen:
  #       Screen.Instance.threadManager.Run([Screen.Instance.threadManager.Add(lambda: Screen.Instance.StartHelper())])
 
     @staticmethod
-    def DrawRect(position, size, color=(255, 255, 255), thickness=1, filled=True):
+    def DrawRect(position, dimensions, color=(255, 255, 255), thickness=1, filled=True):
         if filled:
             x = position[0] - Screen.Instance.camera.x
             y = position[1] - Screen.Instance.camera.y
-            sx = size[0]
-            sy = size[1]
+            sx = dimensions[0]
+            sy = dimensions[1]
             if x < 0:
                 sx += x
             if y < 0:
@@ -198,7 +198,7 @@ class Screen:
                 y = min(max(y, 0), Screen.Instance.height)
                 Screen.Instance.screen.fill(color, (x, y, sx, sy))
         else:
-            pygame.draw.rect(Screen.Instance.screen, color, pygame.Rect(position[0] - Screen.Instance.camera.x, position[1] - Screen.Instance.camera.y, size[0], size[1]), thickness)
+            pygame.draw.rect(Screen.Instance.screen, color, pygame.Rect(position[0] - Screen.Instance.camera.x, position[1] - Screen.Instance.camera.y, dimensions[0], dimensions[1]), thickness)
 
     @staticmethod
     def DrawLines(positions, color=(255, 255, 255), thickness=1):

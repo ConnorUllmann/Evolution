@@ -1,6 +1,7 @@
 from math import *
 from numpy import exp
 from datetime import timedelta
+from pygame import Rect
 from .point import Point
 
 def RemoveMilliseconds(delta):
@@ -35,7 +36,7 @@ def Spiral(n):
         return (k, -m + n + k + t)
 
 def Heartbeat(x):
-    x = x % 1
+    x %= 1
     return 17.0351656925 * x * (1 / (x + 1) - 0.5 * x)**4 * sin(4 * pi * x)
 
 # The Sigmoid function, which describes an S shaped curve.
@@ -59,30 +60,25 @@ def IsInt(x):
         return False
 
 def Cross3(a, b):
-    return [a[1]*b[2] - a[2]*b[1],
-         a[2]*b[0] - a[0]*b[2],
-         a[0]*b[1] - a[1]*b[0]]
+    return [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]]
 
 def CirclesCollide(a_pos, a_radius, b_pos, b_radius):
     return (a_pos - b_pos).lengthSq <= (a_radius + b_radius)**2
 
 def LinesIntersect(m, n, t, u):
-    a = m[0]
-    b = m[1]
-    c = n[0]
-    d = n[1]
-    p = t[0]
-    q = t[1]
-    r = u[0]
-    s = u[1]
-    det = (c - a) * (s - q) - (r - p) * (d - b)
+    det = (n[0] - m[0]) * (u[1] - t[1]) - (u[0] - t[0]) * (n[1] - m[1])
     if det == 0:
         return False
-    _lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det
-    _gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det
-    return (0 < _lambda and _lambda < 1) and (0 < _gamma and _gamma < 1)
+    return 0 < ((u[1] - t[1]) * (u[0] - m[0]) + (t[0] - u[0]) * (u[1] - m[1])) < det and \
+           0 < ((m[1] - n[1]) * (u[0] - m[0]) + (n[0] - m[0]) * (u[1] - m[1])) < det
 
-def LinesIntersectionPoint(A, B, E, F, as_seg = True): 
+def RectanglesCollide(ax, ay, aw, ah, bx, by, bw, bh):
+    return ax + aw >= bx and bx + bw >= ax and ay + ah >= by and by + bh >= ay
+
+def LinesIntersectionPoint(A, B, E, F, as_seg = True):
+    if as_seg and not RectanglesCollide(min(A[0], B[0]), min(A[1], B[1]), abs(A[0]-B[0]), abs(A[1]-B[1]), min(E[0], F[0]), min(E[1], F[1]), abs(E[0]-F[0]), abs(E[1]-F[1])):
+        return None
+
     a1 = B[1]-A[1]
     a2 = F[1]-E[1]
     b1 = A[0]-B[0]

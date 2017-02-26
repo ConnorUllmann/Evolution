@@ -28,6 +28,9 @@ class Polygon(Point):
         s += "]"
         return s
 
+    def __len__(self):
+        return len(self.vertices)
+
     def __init__(self, x=0, y=0, vertices=[]):
         Point.__init__(self, x, y)
         self.vertices = vertices
@@ -39,9 +42,14 @@ class Polygon(Point):
                 verticesTemp.append((self.x + vertex.x, self.y + vertex.y))
             verticesTemp.append(verticesTemp[0])
             Screen.DrawLines(verticesTemp, color, thickness)
-            count = len(self.vertices)
+            count = len(self)
             for i in range(count):
                 Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
+
+    def renderBoundingRect(self, color=Color.white, thickness=1, filled=True):
+        selfMinX = self.minX
+        selfMinY = self.minY
+        Screen.DrawRect((selfMinX, selfMinY), (self.maxX - selfMinX, self.maxY - selfMinY), color, thickness, filled)
 
     def verticesAbsolute(self):
         vertices = []
@@ -53,7 +61,7 @@ class Polygon(Point):
         midPoint = Point()
         for vertex in self.vertices:
             midPoint += vertex
-        return midPoint / max(1, len(self.vertices))
+        return midPoint / max(1, len(self))
 
     def centerOfMassAbsolute(self):
         return self + self.centerOfMassRelative()
@@ -70,11 +78,55 @@ class Polygon(Point):
 
     def contains(self, point):
         total = 0
-        for i in range(len(self.vertices)):
+        for i in range(len(self)):
             a = self + self.vertices[i] - point
-            b = self + self.vertices[(i + 1) % len(self.vertices)] - point
+            b = self + self.vertices[(i + 1) % len(self)] - point
             total += AngleDiff(a.radians, b.radians)
         return abs(total) > 0.001
+    
+    def boundingRectsCollide(self, other):
+        selfMinX = self.minX
+        selfMinY = self.minY
+        otherMinX = other.minX
+        otherMinY = other.minY
+        return RectanglesCollide(selfMinX, selfMinY, self.maxX - selfMinX, self.maxY - selfMinY,
+                                 otherMinX, otherMinY, other.maxX - otherMinX, other.maxY - otherMinY)
+
+    @property
+    def minX(self):
+        if len(self) <= 0:
+            return None
+        minX = self.vertices[0].x
+        for i in range(1, len(self)):
+            minX = min(minX, self.vertices[i].x)
+        return minX + self.x
+    
+    @property
+    def maxX(self):
+        if len(self) <= 0:
+            return None
+        maxX = self.vertices[0].x
+        for i in range(1, len(self)):
+            maxX = max(maxX, self.vertices[i].x)
+        return maxX + self.x
+
+    @property
+    def minY(self):
+        if len(self) <= 0:
+            return None
+        minY = self.vertices[0].y
+        for i in range(1, len(self)):
+            minY = min(minY, self.vertices[i].y)
+        return minY + self.y
+    
+    @property
+    def maxY(self):
+        if len(self) <= 0:
+            return None
+        maxY = self.vertices[0].y
+        for i in range(1, len(self)):
+            maxY = max(maxY, self.vertices[i].y)
+        return maxY + self.y
 
     @property
     def empty(self):
@@ -84,16 +136,13 @@ class Polygon(Point):
     def AbsolutePolygonPointPositionsAndIntersections(A, B, merge, withIncomingIntersections):
         allPoints = []
         allIntersectionIndices = []
-        verticesA = A.verticesAbsolute()
         verticesB = B.verticesAbsolute()
-        for i in range(len(verticesA)):
-            a = verticesA[i]
-            b = verticesA[(i + 1) % len(verticesA)]
+        for i in range(len(A.vertices)):
+            a = A + A.vertices[i]
+            b = A + A.vertices[(i + 1) % len(A)]
             intersectionPoints = []
             for j in range(len(verticesB)):
-                m = verticesB[j]
-                n = verticesB[(j + 1) % len(verticesB)]
-                p = LinesIntersectionPoint(a, b, m, n, True)
+                p = LinesIntersectionPoint(a, b, verticesB[j], verticesB[(j + 1) % len(verticesB)], True)
                 if p is not None:
                     intersectionPoints.append(p)
             intersectionPoints.sort(key=lambda x: (x - a).lengthSq)
@@ -111,18 +160,15 @@ class Polygon(Point):
         incomingIntersections = []
         for index in allIntersectionIndices:
             intersection = allPoints[index]
-            intersectionP = allPoints[(index - 1 + count) % count]
-            intersectionN = allPoints[(index + 1) % count]
-            insideP = B.contains((intersection + intersectionP) / 2)
-            insideN = B.contains((intersection + intersectionN) / 2)
+            insideP = B.contains((intersection + allPoints[(index - 1 + count) % count]) / 2)
+            insideN = B.contains((intersection + allPoints[(index + 1) % count]) / 2)
             if (insideN and not insideP) ^ merge:
                 incomingIntersections.append(intersection)
 
         return [allPoints, incomingIntersections]
 
     @staticmethod
-    def TraverseHandoff(merge, A, B, verticesA, verticesB, intersections, startPolygon, index, polygonPoints):
-        i = index
+    def TraverseHandoff(merge, A, B, verticesA, verticesB, intersections, startPolygon, i, polygonPoints):
         polygon = polygonPoints[-1]
         while True:
             a = verticesA[i%len(verticesA)]
@@ -141,9 +187,8 @@ class Polygon(Point):
 
             if B.contains((a + b)/2) ^ merge:
                 polygon.append(a)
-            else:
-                if a in verticesB:
-                    return Polygon.TraverseHandoff(merge, B, A, verticesB, verticesA, intersections, startPolygon, verticesB.index(a), polygonPoints)
+            elif a in verticesB:
+                return Polygon.TraverseHandoff(merge, B, A, verticesB, verticesA, intersections, startPolygon, verticesB.index(a), polygonPoints)
             i += 1
 
     #Returns list of polygon point sets formed by the intersection or the merging of two polygons (depending on the boolean "merge" property)
@@ -162,6 +207,9 @@ class Polygon(Point):
         else:
             if Aempty or Bempty:
                 return []
+
+        if not A.boundingRectsCollide(B):
+            return [A.verticesAbsolute(), B.verticesAbsolute()] if merge else []
 
         verticesA, incomingIntersectionsA = Polygon.AbsolutePolygonPointPositionsAndIntersections(A, B, merge, True)
         verticesB = Polygon.AbsolutePolygonPointPositionsAndIntersections(B, A, merge, False)
@@ -228,3 +276,4 @@ class PolygonEntity(Polygon, Entity):
     def Render(self):
         if self.visible:
             self.renderPolygon(self.color, self.thickness)
+            #self.renderBoundingRect(filled=False)
