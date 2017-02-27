@@ -408,11 +408,9 @@ class PolygonEntity(Polygon, Entity):
                 polygonsNew.extend(_polygon.splitOnceWithVelocity(pair[0], pair[1], velocities))
             polygons = polygonsNew
 
-        colors = {}
         polygonEntities = []
         for polygon in polygons:
             polygonEntity = PolygonEntity(polygon)
             polygonEntities.append(polygonEntity)
             polygonEntity.v = velocities[polygon]
-            colors[polygon] = polygonEntity.color
         return polygonEntities
