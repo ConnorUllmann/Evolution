@@ -30,3 +30,10 @@ class Color:
     light_grey = light_gray = (192, 192, 192)
     medium_grey = medium_gray = (128, 128, 128)
     dark_grey = dark_gray = (64, 64, 64)
+
+    all = (
+        red, green, blue, white, cyan, yellow, magenta,
+        light_red, light_green, light_blue, light_cyan, light_yellow, light_magenta,
+        dark_red, dark_green, dark_blue, dark_cyan, dark_yellow, dark_magenta,
+        light_grey, medium_grey, dark_grey
+    )

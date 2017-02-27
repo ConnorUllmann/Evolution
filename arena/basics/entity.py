@@ -56,8 +56,8 @@ class Entity(StateMachine, Point):
         self.id = Entity.GetId()
         Entity.Add(self)
         
-        Screen.Instance.AddUpdateFunction(self, self.Update)
-        Screen.Instance.AddRenderFunction(self, self.Render)
+        Screen.Instance.AddUpdateFunction(Entity.__str__(self), self.Update)
+        Screen.Instance.AddRenderFunction(Entity.__str__(self), self.Render)
         Screen.PutOnTop(self)
         
         self.v = Point()
@@ -72,6 +72,6 @@ class Entity(StateMachine, Point):
     def Destroy(self):
         if not self.destroyed:
             self.destroyed = True
-            Screen.Instance.RemoveUpdateFunctions(self)
-            Screen.Instance.RemoveRenderFunctions(self)
+            Screen.Instance.RemoveUpdateFunctions(Entity.__str__(self))
+            Screen.Instance.RemoveRenderFunctions(Entity.__str__(self))
             Entity.Remove(self)

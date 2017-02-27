@@ -111,6 +111,18 @@ def PointOnLineAtY(a, b, y):
         return (a+b)/2
     return Point((y - a[1]) / diffY * (b[0] - a[0]) + a[0], y)
 
+def PointOnLineClosestToPoint(lineA, lineB, point, as_segment=False):
+    AB = lineB - lineA
+    ret = (point - lineA).proj(AB) + lineA
+    if not as_segment or ColinearPointInsideLineSegment(point, lineA, lineB):
+        return ret
+    r = (ret - lineA).dot(AB)
+    if r < 0:
+        return lineA
+    if r > 1:
+        return lineB
+    return ret
+
 def ColinearPointInsideLineSegment(pos, lineA, lineB):
     v = (pos - lineA).dot(lineB - lineA)
     return v >= 0 and v <= (lineB - lineA).lengthSq

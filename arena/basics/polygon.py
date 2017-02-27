@@ -142,23 +142,22 @@ class Polygon(Point):
     def empty(self):
         return len(self.vertices) <= 0
 
-    @staticmethod
-    def SplitTraverse(polygon, lineA, lineB):
-        if len(polygon) <= 0:
+    def splitTraverse(self, lineA, lineB):
+        if len(self) <= 0:
             return []
 
         if lineA.y == lineB.y:
-            xmin = polygon.minX - 10
-            xmax = polygon.maxX + 10
+            xmin = self.minX - 10
+            xmax = self.maxX + 10
             m = PointOnLineAtX(lineA, lineB, xmin)
             n = PointOnLineAtX(lineA, lineB, xmax)
         else:
-            ymin = polygon.minY - 10
-            ymax = polygon.maxY + 10
+            ymin = self.minY - 10
+            ymax = self.maxY + 10
             m = PointOnLineAtY(lineA, lineB, ymin)
             n = PointOnLineAtY(lineA, lineB, ymax)
 
-        vertices = polygon.verticesAbsolute()
+        vertices = self.verticesAbsolute()
 
         points = []
         intersections = []
@@ -174,6 +173,9 @@ class Polygon(Point):
                 intersections.append([p, b])
                 points.append(p)
         intersections.sort(key=lambda x: (x[0] - m).lengthSq)
+
+        if len(intersections) <= 0:
+            return [vertices]
 
         count = len(intersections)
         for i in range(0, count, 2):
@@ -210,21 +212,39 @@ class Polygon(Point):
                     break
             i = j
 
-    @staticmethod
-    def SplitOnce(polygon, lineA, lineB):
-        polygonsPoints = Polygon.SplitTraverse(polygon, lineA, lineB)
+    #velocities is an implicitly returned dictionary
+    def splitOnceWithVelocity(self, lineA, lineB, velocities):
+        parentVelocity = Point() if self not in velocities else velocities[self]
+        polygonsPoints = self.splitTraverse(lineA, lineB)
+        if len(polygonsPoints) > 0 and len(polygonsPoints[-1]) <= 0:
+            polygonsPoints = polygonsPoints[:-1]
+        shouldPush = len(polygonsPoints) != 1 or len(polygonsPoints[0]) != len(self.vertices)
+        polygons = []
+        for polygonPoints in polygonsPoints:
+            polygon = Polygon.NewFromAbsolutePositions(polygonPoints)
+            polygons.append(polygon)
+            diff = polygon - PointOnLineClosestToPoint(lineA, lineB, polygon, False)
+            #If we're not on the same side as the center of mass of the parent, make us move away
+            if diff.lengthSq < (self - polygon).lengthSq:
+                push = diff.normalized * 10 if shouldPush else Point()
+            else:
+                push = Point()
+            velocities[polygon] = parentVelocity + push
+        return polygons
+
+    def splitOnce(self, lineA, lineB):
+        polygonsPoints = self.splitTraverse(lineA, lineB)
         polygons = []
         for polygonPoints in polygonsPoints:
             polygons.append(Polygon.NewFromAbsolutePositions(polygonPoints))
         return polygons
 
-    @staticmethod
-    def Split(polygon, linePoints):
-        polygons = [polygon]
+    def split(self, linePoints):
+        polygons = [self]
         for pair in linePoints:
             polygonsNew = []
             for _polygon in polygons:
-                polygonsNew.extend(Polygon.SplitOnce(_polygon, pair[0], pair[1]))
+                polygonsNew.extend(_polygon.splitOnce(pair[0], pair[1]))
             polygons = polygonsNew
         return polygons
 
@@ -358,10 +378,10 @@ class Polygon(Point):
 
 class PolygonEntity(Polygon, Entity):
 
-    def __init__(self, polygon, color=(255, 255, 255), thickness=1):
+    def __init__(self, polygon, color=None, thickness=1):
         Polygon.__init__(self, polygon.x, polygon.y, polygon.vertices)
         Entity.__init__(self, polygon.x, polygon.y)
-        self.color = color
+        self.color = color if color is not None else Color.all[self.id%len(Color.all)]
         self.thickness = thickness
         self.angle = 0
         self.visible = True
@@ -372,4 +392,27 @@ class PolygonEntity(Polygon, Entity):
     def Render(self):
         if self.visible:
             self.renderPolygon(self.color, self.thickness)
-            #self.renderBoundingRect(filled=False)
+
+    def Update(self):
+        Entity.Update(self)
+        self.v *= 0.5
+        self.x += self.v.x
+        self.y += self.v.y
+
+    def splitWithVelocity(self, linePoints):
+        polygons = [self]
+        velocities = {}
+        for pair in linePoints:
+            polygonsNew = []
+            for _polygon in polygons:
+                polygonsNew.extend(_polygon.splitOnceWithVelocity(pair[0], pair[1], velocities))
+            polygons = polygonsNew
+
+        colors = {}
+        polygonEntities = []
+        for polygon in polygons:
+            polygonEntity = PolygonEntity(polygon)
+            polygonEntities.append(polygonEntity)
+            polygonEntity.v = velocities[polygon]
+            colors[polygon] = polygonEntity.color
+        return polygonEntities

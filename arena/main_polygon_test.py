@@ -1,4 +1,4 @@
-from basics import Screen, Polygon, PolygonEntity, Point, Color, RectanglesCollide, PointOnLineAtX, PointOnLineAtY
+from basics import Screen, Polygon, PolygonEntity, Point, Color, RectanglesCollide, PointOnLineAtX, PointOnLineAtY, PointOnLineClosestToPoint
 import pygame
 from time import time
 from math import pi, sin
@@ -33,18 +33,9 @@ cuttingLines = [
 ]
 def BeginGame():
     global polygons, debugPoints
-    colors = [
-        Color.light_green,
-        Color.light_blue,
-        Color.light_red,
-        Color.light_magenta,
-        Color.light_cyan
-    ]
 
-    # polygons.append(PolygonEntity(Polygon(200, 200, [Point(-100, 0), Point(100, 0), Point(0, 200)]), Color.green))
-    # polygons.append(PolygonEntity(Polygon(500, 200, [Point(-100, 0), Point(100, 0), Point(0, 200)]), Color.blue))
     for i in range(1):
-        polygons.append(PolygonEntity(GeneratePolygon(300 + 200 * random.random(), 300 + 200 * random.random()), colors[i%len(colors)]))
+        polygons.append(PolygonEntity(GeneratePolygon(300 + 200 * random.random(), 300 + 200 * random.random()), Color.all[i%len(Color.all)]))
 
 def RotatePolygons(amount, polygons):
     for i in range(len(polygons)):
@@ -78,51 +69,28 @@ def UpdateGame():
         mergeDuration = time() - mergeStart
         print("Merge/intersect duration: {}s = {} frames at 60FPS".format(int(mergeDuration*100)/100, int(mergeDuration*60)))
 
-    if True:#Screen.KeyReleased(pygame.K_c):
-        mergePolygons = Polygon.Split(polygons[0], cuttingLines)
-        #average = Point(polygons[0].x, polygons[0].y)
+    if Screen.KeyReleased(pygame.K_c):
+        mergePolygons = polygons[0].split(cuttingLines)
 
-    for i in range(len(mergePolygons)):
-        mergePolygons[i].scale(sin(time()) * 0.05 + 0.9)
-           #mergePolygons[i].x = 1.05 * (mergePolygons[i].x - average.x) + average.x
-           #mergePolygons[i].y = 1.05 * (mergePolygons[i].y - average.y) + average.y
+    if Screen.KeyReleased(pygame.K_n):
+        for polygon in mergePolygons:
+            polygon.Destroy()
+        mergePolygons = polygons[0].splitWithVelocity(cuttingLines)
 
     polygons[0].x = Screen.Instance.MousePosition().x
     polygons[0].y = Screen.Instance.MousePosition().y
 
 def RenderGame():
     global mergePolygons, intersectPolygons, cuttingLines
-
-    colors = [
-        Color.light_green,
-        Color.light_blue,
-        Color.light_red,
-        Color.light_magenta,
-        Color.light_cyan,
-        Color.yellow,
-        Color.red,
-        Color.green,
-        Color.blue,
-        Color.magenta,
-        Color.cyan,
-        Color.dark_red,
-        Color.dark_green,
-        Color.dark_blue,
-        Color.dark_magenta,
-        Color.dark_cyan,
-        Color.dark_yellow
-    ]
     for i in range(len(mergePolygons)):
-        mergePolygons[i].renderPolygon(colors[i%len(colors)], 1)
+        mergePolygons[i].renderPolygon(Color.all[i%len(Color.all)], 1)
     for polygon in intersectPolygons:
         polygon.renderPolygon(Color.yellow, 4)
-    #if polygons[0].boundingRectsCollide(polygons[1]):
-    #    polygons[1].renderBoundingRect(Color.red, 6, False)
 
     for pair in cuttingLines:
-        Screen.DrawLine(PointOnLineAtX(pair[0], pair[1], 0),\
+        Screen.DrawLine(PointOnLineAtX(pair[0], pair[1], 0),
                         PointOnLineAtX(pair[0], pair[1], Screen.Width()), Color.red, 1)
-        Screen.DrawLine(PointOnLineAtY(pair[0], pair[1], 0),\
+        Screen.DrawLine(PointOnLineAtY(pair[0], pair[1], 0),
                         PointOnLineAtY(pair[0], pair[1], Screen.Height()), Color.red, 1)
 
 def StartGame():
