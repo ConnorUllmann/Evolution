@@ -16,7 +16,6 @@ class Polygon(Point):
     @staticmethod
     def NewFromAbsolutePositions(vertices):
         p = Polygon(0, 0, vertices)
-        p.position = p.centerOfMassRelative()
         p.centerVertices()
         return p
 
@@ -36,15 +35,16 @@ class Polygon(Point):
         self.vertices = vertices
 
     def renderPolygon(self, color, thickness):
+        Screen.DrawCircle(self, 3, color)
         if len(self.vertices) > 1:
             verticesTemp = []
             for vertex in self.vertices:
                 verticesTemp.append((self.x + vertex.x, self.y + vertex.y))
             verticesTemp.append(verticesTemp[0])
             Screen.DrawLines(verticesTemp, color, thickness)
-            count = len(self)
-            for i in range(count):
-                Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
+            #count = len(self)
+            #for i in range(count):
+            #    Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
 
     def renderBoundingRect(self, color=Color.white, thickness=1, filled=True):
         selfMinX = self.minX
@@ -61,15 +61,18 @@ class Polygon(Point):
         midPoint = Point()
         for vertex in self.vertices:
             midPoint += vertex
-        return midPoint / max(1, len(self))
+        return midPoint / max(1, len(self.vertices))
 
     def centerOfMassAbsolute(self):
         return self + self.centerOfMassRelative()
 
     def centerVertices(self):
         centerOfMass = self.centerOfMassRelative()
-        for vertex in self.vertices:
-            vertex -= centerOfMass
+        self.x += centerOfMass.x
+        self.y += centerOfMass.y
+        for i in range(len(self.vertices)):
+            self.vertices[i].x -= centerOfMass.x
+            self.vertices[i].y -= centerOfMass.y
 
     def rotateRadians(self, radians, center=None):
         centerOfMass = self.centerOfMassRelative() if center is None else (center - self)
@@ -91,6 +94,13 @@ class Polygon(Point):
         otherMinY = other.minY
         return RectanglesCollide(selfMinX, selfMinY, self.maxX - selfMinX, self.maxY - selfMinY,
                                  otherMinX, otherMinY, other.maxX - otherMinX, other.maxY - otherMinY)
+
+    def scale(self, multiplier, center=None):
+        if center is None:
+            center = self.centerOfMassRelative()
+        for i in range(len(self.vertices)):
+            self.vertices[i].x = multiplier * (self.vertices[i].x - center.x) + center.x
+            self.vertices[i].y = multiplier * (self.vertices[i].y - center.y) + center.y
 
     @property
     def minX(self):
@@ -131,6 +141,92 @@ class Polygon(Point):
     @property
     def empty(self):
         return len(self.vertices) <= 0
+
+    @staticmethod
+    def SplitTraverse(polygon, lineA, lineB):
+        if len(polygon) <= 0:
+            return []
+
+        if lineA.y == lineB.y:
+            xmin = polygon.minX - 10
+            xmax = polygon.maxX + 10
+            m = PointOnLineAtX(lineA, lineB, xmin)
+            n = PointOnLineAtX(lineA, lineB, xmax)
+        else:
+            ymin = polygon.minY - 10
+            ymax = polygon.maxY + 10
+            m = PointOnLineAtY(lineA, lineB, ymin)
+            n = PointOnLineAtY(lineA, lineB, ymax)
+
+        vertices = polygon.verticesAbsolute()
+
+        points = []
+        intersections = []
+        unchecked = []
+        count = len(vertices)
+        for j in range(count):
+            a = vertices[j]
+            b = vertices[(j + 1) % count]
+            p = LinesIntersectionPoint(m, n, a, b, True)
+            unchecked.append(len(points))
+            points.append(a)
+            if p is not None:
+                intersections.append([p, b])
+                points.append(p)
+        intersections.sort(key=lambda x: (x[0] - m).lengthSq)
+
+        count = len(intersections)
+        for i in range(0, count, 2):
+            c = intersections[i]
+            if i+1 >= count:
+                c.append(c[0])
+                break
+            d = intersections[i+1]
+            c.append(d[0])
+            d.append(c[0])
+
+        polygonsPoints = [[]]
+        i = unchecked[0]
+        while True:
+            if i in unchecked:
+                unchecked.remove(i)
+
+            if len(polygonsPoints[-1]) > 0 and polygonsPoints[-1][0] == points[i]:
+                polygonsPoints.append([])
+                if len(unchecked) > 0:
+                    i = unchecked[0]
+                    continue
+                return polygonsPoints
+
+            polygonsPoints[-1].append(Point.Clone(points[i]))
+            j = (i+1)%len(points)
+            for intersectionInfo in intersections:
+                if intersectionInfo[0] == points[i]:
+                    for intersectionInfoOther in intersections:
+                        if intersectionInfo[2] == intersectionInfoOther[0]:
+                            j = points.index(intersectionInfoOther[1])
+                            break
+                    polygonsPoints[-1].append(Point.Clone(intersectionInfo[2]))
+                    break
+            i = j
+
+    @staticmethod
+    def SplitOnce(polygon, lineA, lineB):
+        polygonsPoints = Polygon.SplitTraverse(polygon, lineA, lineB)
+        polygons = []
+        for polygonPoints in polygonsPoints:
+            polygons.append(Polygon.NewFromAbsolutePositions(polygonPoints))
+        return polygons
+
+    @staticmethod
+    def Split(polygon, linePoints):
+        polygons = [polygon]
+        for pair in linePoints:
+            polygonsNew = []
+            for _polygon in polygons:
+                polygonsNew.extend(Polygon.SplitOnce(_polygon, pair[0], pair[1]))
+            polygons = polygonsNew
+        return polygons
 
     @staticmethod
     def AbsolutePolygonPointPositionsAndIntersections(A, B, merge, withIncomingIntersections):

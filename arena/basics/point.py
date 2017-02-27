@@ -5,8 +5,8 @@ class Point:
     deg2rad = pi / 180
 
     @staticmethod
-    def Clone(a):
-        return Point(a.x, a.y)
+    def Clone(point):
+        return Point(point.x, point.y, point.integer)
 
     def __init__(self, x=0, y=0, integer=False):
         self.integer = bool(integer)

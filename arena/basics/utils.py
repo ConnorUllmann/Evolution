@@ -99,6 +99,18 @@ def LinesIntersectionPoint(A, B, E, F, as_seg = True):
         return None
     return ip
 
+def PointOnLineAtX(a, b, x):
+    diffX = b[0] - a[0]
+    if diffX == 0:
+        return (a+b)/2
+    return Point(x, (x - a[0]) / diffX * (b[1] - a[1]) + a[1])
+
+def PointOnLineAtY(a, b, y):
+    diffY = b[1] - a[1]
+    if diffY == 0:
+        return (a+b)/2
+    return Point((y - a[1]) / diffY * (b[0] - a[0]) + a[0], y)
+
 def ColinearPointInsideLineSegment(pos, lineA, lineB):
     v = (pos - lineA).dot(lineB - lineA)
     return v >= 0 and v <= (lineB - lineA).lengthSq
@@ -147,8 +159,8 @@ def Torque(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])
     return r.cross(forceVector)
 def TorquePushVector(centerOfMass, forcePosition, forceVector):
-    r = (forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])
-    return Proj(forceVector, r)
+    r = Point(forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])
+    return forceVector.proj(r)
 def TorquePullVector(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[1] - centerOfMass[1], -forcePosition[0] + centerOfMass[0])
     return forceVector.proj(r)
