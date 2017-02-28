@@ -11,6 +11,8 @@ class Color:
     black = (0, 0, 0)
     cyan = (0, 255, 255)
     yellow = (255, 255, 0)
+    orange = (255, 128, 0)
+    teal = (0, 255, 128)
     magenta = (255, 0, 255)
 
     light_red = (255, 128, 128)
@@ -32,7 +34,7 @@ class Color:
     dark_grey = dark_gray = (64, 64, 64)
 
     all = (
-        red, green, blue, white, cyan, yellow, magenta,
+        red, green, blue, white, cyan, yellow, orange, teal, magenta,
         light_red, light_green, light_blue, light_cyan, light_yellow, light_magenta,
         dark_red, dark_green, dark_blue, dark_cyan, dark_yellow, dark_magenta,
         light_grey, medium_grey, dark_grey
