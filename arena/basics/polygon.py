@@ -10,8 +10,7 @@ class Polygon(Point):
         v = []
         for vertex in polygon.vertices:
             v.append(Point(vertex.x, vertex.y))
-        p = Polygon(polygon.x, polygon.y, v)
-        return p
+        return Polygon(polygon.x, polygon.y, v)
 
     @staticmethod
     def NewFromAbsolutePositions(vertices):
@@ -42,9 +41,9 @@ class Polygon(Point):
                 verticesTemp.append((self.x + vertex.x, self.y + vertex.y))
             verticesTemp.append(verticesTemp[0])
             Screen.DrawLines(verticesTemp, color, thickness)
-            #count = len(self)
-            #for i in range(count):
-            #    Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
+            count = len(self)
+            for i in range(count):
+                Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
 
     def renderBoundingRect(self, color=Color.white, thickness=1, filled=True):
         selfMinX = self.minX

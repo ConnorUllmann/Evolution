@@ -123,6 +123,10 @@ def PointOnLineClosestToPoint(lineA, lineB, point, as_segment=False):
         return lineB
     return ret
 
+#Will return negative values depending on what side of (a, b) that c is on
+def AreaTriangle(a, b, c):
+    return 0.5 * (a.x * (b.y - c.y) - b.x * (a.y - c.y) + c.x * (a.y - b.y))
+
 def ColinearPointInsideLineSegment(pos, lineA, lineB):
     v = (pos - lineA).dot(lineB - lineA)
     return v >= 0 and v <= (lineB - lineA).lengthSq
