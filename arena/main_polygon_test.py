@@ -73,9 +73,17 @@ def UpdateGame():
         mergePolygons = polygons[0].split(cuttingLines)
 
     if Screen.KeyReleased(pygame.K_n):
-        for polygon in mergePolygons:
-            polygon.Destroy()
-        mergePolygons = polygons[0].splitWithVelocity(cuttingLines)
+        if len(mergePolygons) > 0:
+            for polygon in polygons:
+                polygon.visible = True
+            for polygon in mergePolygons:
+                polygon.Destroy()
+            mergePolygons = []
+        else:
+            mergePolygons = polygons[0].splitWithVelocity(cuttingLines)
+            for polygon in polygons:
+                polygon.visible = False
+
 
     polygons[0].x = Screen.Instance.MousePosition().x
     polygons[0].y = Screen.Instance.MousePosition().y
