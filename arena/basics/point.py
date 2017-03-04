@@ -15,6 +15,22 @@ class Point:
         self.iter_index = 0
 
     @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, _x):
+        self._x = int(round(_x)) if self.integer else _x
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, _y):
+        self._y = int(round(_y)) if self.integer else _y
+
+    @property
     def normalized(self):
         l = self.length
         if l == 0:
@@ -31,35 +47,6 @@ class Point:
 
     def __len__(self):
         return int(self.length)
-
-    def dot(self, other):
-        return self.x * other[0] + self.y * other[1]
-
-    def cross(self, other):
-        return self.x * other[1] - self.y * other[0]
-
-    def proj(self, other):
-        return self.dot(other) / max(other.lengthSq, 0.0000001) * other
-
-    def reflect(self, normal):
-        n = Point(normal.y, -normal.x)
-        return self - 2 * self.dot(n) / max(n.lengthSq, 0.0000001) * n
-
-    @property
-    def x(self):
-        return self._x
-
-    @x.setter
-    def x(self, _x):
-        self._x = int(round(_x)) if self.integer else _x
-
-    @property
-    def y(self):
-        return self._y
-
-    @y.setter
-    def y(self, _y):
-        self._y = int(round(_y)) if self.integer else _y
 
     @property
     def radians(self):
@@ -94,6 +81,19 @@ class Point:
 
     def rotateDegrees(self, degrees, center=None):
         return self.rotateRadians(degrees * Point.deg2rad, center)
+
+    def dot(self, other):
+        return self.x * other[0] + self.y * other[1]
+
+    def cross(self, other):
+        return self.x * other[1] - self.y * other[0]
+
+    def proj(self, other):
+        return self.dot(other) / max(other.lengthSq, 0.0000001) * other
+
+    def reflect(self, normal):
+        n = Point(normal.y, -normal.x)
+        return self - 2 * self.dot(n) / max(n.lengthSq, 0.0000001) * n
 
     def distanceTo(self, other):
         return (self - other).length

@@ -10,7 +10,7 @@ mouseClickPosition = None
 softbodies = []
 def BeginGame():
     global softbodies
-    softbodies.append(Softbody(280, 240, [Point(-100, 0), Point(-100, -100), Point(0, -100), Point(100, -100),
+    softbodies.append(Softbody(Screen.Width()/2, Screen.Height()/2, [Point(-100, 0), Point(-100, -100), Point(0, -100), Point(100, -100),
                                    Point(25, 0), Point(100, 100), Point(0, 100), Point(-100, 100)]))
     softbodies[0].addStandardSupportRods()
 
@@ -22,7 +22,7 @@ def GeneratePolygonVertices():
     angle = 0
     while angle < 2 * pi:
         length = random.random() * 150 + 100
-        angle = min(angle + random.random() * 0.1 + 0.05, 2*pi)
+        angle = min(angle + random.random() * 0.2 + 0.1, 2*pi)
         point = Point(length, 0)
         point.radians = angle
         vertices.append(point)
@@ -105,7 +105,7 @@ def RenderGame():
 
 
 def StartGame():
-    Screen(640, 480)
+    Screen(800, 640)
     PreGame()
     Screen.AddUpdateFunction("main", UpdateGame)
     Screen.AddRenderFunction("main", RenderGame)
