@@ -123,23 +123,22 @@ class Softbody(Entity, Polygon):
             rod = ViscoElasticRod(a, b, Color.orange)
             self.rods.append(rod)
 
-    def AddStandardSupportRods(self):
-        self.rodsSupport = []
-        for i in range(int(len(self.vertices)/2)):
-            a = self.vertices[i]
-            c = self.vertices[(i+int(len(self.vertices)/2))%len(self.vertices)]
-            rod = ViscoElasticRod(a, c, Color.cyan)
-            self.rodsSupport.append(rod)
-
-    # a and b are vertices on the Softbody
-    def AddSupportRod(self, a, b):
+    def addSupportRod(self, a, b):
+        # a and b are nodes on the Softbody
         if a in self.vertices and b in self.vertices:
             rod = ViscoElasticRod(a, b, Color.cyan)
             self.rodsSupport.append(rod)
             return rod
         return None
 
-    def GenerateRandomSupportRods(self, count=20):
+    def addStandardSupportRods(self):
+        self.rodsSupport = []
+        for i in range(int(len(self.vertices)/2)):
+            a = self.vertices[i]
+            b = self.vertices[(i+int(len(self.vertices)/2))%len(self.vertices)]
+            self.addSupportRod(a, b)
+
+    def generateRandomSupportRods(self, count=20):
         newSupportRods = 0
         while newSupportRods < count:
             aIndex = int(random() * len(self.vertices))
@@ -147,44 +146,21 @@ class Softbody(Entity, Polygon):
             if abs(bIndex - aIndex) > 2:
                 a = self.vertices[aIndex]
                 b = self.vertices[bIndex]
-                ab = (b - a).normalized
-                aTemp = self + a + ab * 0.00001
-                bTemp = self + b - ab * 0.00001
+                ab = (b - a).normalized * 0.00001
+                aTemp = self + a + ab
+                bTemp = self + b - ab
                 if self.containsLineSegment(aTemp, bTemp):
-                    self.AddSupportRod(a, b)
+                    self.addSupportRod(a, b)
                     newSupportRods += 1
 
-
-    def GetLocalBoundingRectangle(self):
-        if len(self.vertices) <= 0:
-            return [0, 0, 0, 0]
-        xmin = self.vertices[0].x
-        xmax = self.vertices[0].x
-        ymin = self.vertices[0].y
-        ymax = self.vertices[0].y
-        for i in range(1, len(self.vertices)):
-            vertex = self.vertices[i]
-            xmin = min(xmin, vertex.x)
-            xmax = max(xmax, vertex.x)
-            ymin = min(ymin, vertex.y)
-            ymax = max(ymax, vertex.y)
-        return [xmin, ymin, xmax - xmin, ymax - ymin]
-
-    def CollidesRectangle(self, ax, ay, aw, ah):
-        boundingRect = self.GetLocalBoundingRectangle()
-        return RectanglesCollide(self.x + boundingRect[0], self.y + boundingRect[1], boundingRect[2], boundingRect[3], ax, ay, aw, ah)
-
-    def IsInsideScreen(self):
-        return self.CollidesRectangle(0, 0, Screen.Width(), Screen.Height())
-
-    def PutVerticesInsideScreen(self):
+    def putVerticesInsideScreen(self):
         for vertex in self.vertices:
             vertex.x = min(max(vertex.x + self.x, 0), Screen.Width()) - self.x
             vertex.y = min(max(vertex.y + self.y, 0), Screen.Height()) - self.y
 
     def Update(self):
 
-        if not self.IsInsideScreen():
+        if not self.insideScreen():
             self.Destroy()
             return
 
@@ -201,8 +177,8 @@ class Softbody(Entity, Polygon):
             rod.update()
         for node in self.vertices:
             node.update()
-        self.MoveNodesAroundMouse()
-        # self.PutVerticesInsideScreen()
+        self.moveNodesAroundMouse()
+        # self.putVerticesInsideScreen()
 
     def Render(self):
         for rod in self.rods:
@@ -212,7 +188,14 @@ class Softbody(Entity, Polygon):
         for node in self.vertices:
             node.render(self)
 
-    def MoveNodesAroundMouse(self):
+    def scale(self, multiplier, center=None):
+        Polygon.scale(self, multiplier, center)
+        for rod in self.rods:
+            rod.span *= multiplier
+        for rod in self.rodsSupport:
+            rod.span *= multiplier
+
+    def moveNodesAroundMouse(self):
         for node in self.vertices:
             mouseRelative = Screen.MousePosition() - self
             nodeToMouse = mouseRelative - node

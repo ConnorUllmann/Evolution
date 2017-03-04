@@ -101,6 +101,14 @@ class Polygon(Point):
 
         return True
 
+    def insideScreen(self):
+        return self.collideWithRectangle(0, 0, Screen.Width(), Screen.Height())
+
+    def collideWithRectangle(self, ax, ay, aw, ah):
+        selfMinX = self.minX
+        selfMinY = self.minY
+        return RectanglesCollide(selfMinX, selfMinY, self.maxX - selfMinX, self.maxY - selfMinY, ax, ay, aw, ah)
+
     def boundingRectsCollide(self, other):
         selfMinX = self.minX
         selfMinY = self.minY
@@ -226,8 +234,8 @@ class Polygon(Point):
                     break
             i = j
 
-    #velocities is an implicitly returned dictionary
     def splitOnceWithVelocity(self, lineA, lineB, velocities):
+        #velocities is an implicitly returned dictionary
         parentVelocity = Point() if self not in velocities else velocities[self]
         polygonsPoints = self.splitTraverse(lineA, lineB)
         if len(polygonsPoints) > 0 and len(polygonsPoints[-1]) <= 0:
@@ -321,9 +329,10 @@ class Polygon(Point):
                 return Polygon.TraverseHandoff(merge, B, A, verticesB, verticesA, intersections, startPolygon, verticesB.index(a), polygonPoints)
             i += 1
 
-    #Returns list of polygon point sets formed by the intersection or the merging of two polygons (depending on the boolean "merge" property)
     @staticmethod
     def Traverse(merge, A, B):
+        # Returns list of polygon point sets formed by the intersection or the merging of two polygons (depending on the boolean "merge" property)
+
         #Return case where one of the polygons is empty
         Aempty = A.empty
         Bempty = B.empty

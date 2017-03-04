@@ -12,7 +12,7 @@ def BeginGame():
     global softbodies
     softbodies.append(Softbody(280, 240, [Point(-100, 0), Point(-100, -100), Point(0, -100), Point(100, -100),
                                    Point(25, 0), Point(100, 100), Point(0, 100), Point(-100, 100)]))
-    softbodies[0].AddStandardSupportRods()
+    softbodies[0].addStandardSupportRods()
 
 def CullDeadEntitiesFromList(entities):
     return [entities[i] for i in range(len(entities)) if not entities[i].destroyed]
@@ -48,8 +48,15 @@ def UpdateGame():
 
     if Screen.KeyReleased(pygame.K_c):
         softbody = Softbody(Screen.Width()/2, Screen.Height()/2, GeneratePolygonVertices())
-        softbody.GenerateRandomSupportRods(50)
+        softbody.generateRandomSupportRods(50)
         softbodies.append(softbody)
+
+    if Screen.KeyDown(pygame.K_j):
+        for softbody in softbodies:
+            softbody.scale(1.01)
+    if Screen.KeyDown(pygame.K_k):
+        for softbody in softbodies:
+            softbody.scale(0.99)
 
     if Screen.KeyReleased(pygame.K_d):
         for softbody in softbodies:
