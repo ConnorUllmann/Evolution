@@ -85,7 +85,22 @@ class Polygon(Point):
             b = self + self.vertices[(i + 1) % len(self)] - point
             total += AngleDiff(a.radians, b.radians)
         return abs(total) > 0.001
-    
+
+    def containsLineSegment(self, a, b):
+        # a and b are points in absolute space
+
+        if not self.contains((a + b) / 2):
+            return False
+
+        count = len(self.vertices)
+        for i in range(count):
+            m = self + self.vertices[i]
+            n = self + self.vertices[(i + 1) % count]
+            if LinesIntersectionPoint(a, b, m, n, True) is not None:
+                return False
+
+        return True
+
     def boundingRectsCollide(self, other):
         selfMinX = self.minX
         selfMinY = self.minY

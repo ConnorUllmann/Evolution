@@ -4,6 +4,7 @@ from .screen import Screen
 from .color import Color
 from .entity import Entity
 from .utils import PointOnLineAtX, PointOnLineAtY, LinesIntersectionPoint, PointOnLineClosestToPoint, RectanglesCollide
+from random import random
 
 class ViscoElasticNode(Point):
     dampener = 0.9
@@ -129,6 +130,30 @@ class Softbody(Entity, Polygon):
             c = self.vertices[(i+int(len(self.vertices)/2))%len(self.vertices)]
             rod = ViscoElasticRod(a, c, Color.cyan)
             self.rodsSupport.append(rod)
+
+    # a and b are vertices on the Softbody
+    def AddSupportRod(self, a, b):
+        if a in self.vertices and b in self.vertices:
+            rod = ViscoElasticRod(a, b, Color.cyan)
+            self.rodsSupport.append(rod)
+            return rod
+        return None
+
+    def GenerateRandomSupportRods(self, count=20):
+        newSupportRods = 0
+        while newSupportRods < count:
+            aIndex = int(random() * len(self.vertices))
+            bIndex = int(random() * len(self.vertices))
+            if abs(bIndex - aIndex) > 2:
+                a = self.vertices[aIndex]
+                b = self.vertices[bIndex]
+                ab = (b - a).normalized
+                aTemp = self + a + ab * 0.00001
+                bTemp = self + b - ab * 0.00001
+                if self.containsLineSegment(aTemp, bTemp):
+                    self.AddSupportRod(a, b)
+                    newSupportRods += 1
+
 
     def GetLocalBoundingRectangle(self):
         if len(self.vertices) <= 0:
@@ -361,6 +386,6 @@ class Softbody(Entity, Polygon):
                 totalMass += vertex.mass
                 vertex.momentum = 1000 * max(0, 25 - (PointOnLineClosestToPoint(lineA, lineB, vertex) - vertex).lengthSq) * direction
 
-            softbody.v = self.v + 150 / totalMass * direction
+            softbody.v = self.v + 400 / totalMass * direction
 
         return softbodies

@@ -21,7 +21,7 @@ def GeneratePolygonVertices():
     vertices = []
     angle = 0
     while angle < 2 * pi:
-        length = random.random() * 250 + 20
+        length = random.random() * 150 + 100
         angle = min(angle + random.random() * 0.1 + 0.05, 2*pi)
         point = Point(length, 0)
         point.radians = angle
@@ -48,6 +48,7 @@ def UpdateGame():
 
     if Screen.KeyReleased(pygame.K_c):
         softbody = Softbody(Screen.Width()/2, Screen.Height()/2, GeneratePolygonVertices())
+        softbody.GenerateRandomSupportRods(50)
         softbodies.append(softbody)
 
     if Screen.KeyReleased(pygame.K_d):
