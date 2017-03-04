@@ -1,9 +1,11 @@
 from random import randint
 
 class Color:
+
     @staticmethod
     def random():
         return (randint(0, 255), randint(0, 255), randint(0, 255))
+
     red = (255, 0, 0)
     green = (0, 255, 0)
     blue = (0, 0, 255)
@@ -34,8 +36,8 @@ class Color:
     dark_grey = dark_gray = (64, 64, 64)
 
     all = (
-        red, green, blue, white, cyan, yellow, orange, teal, magenta,
+        white, red, green, blue, white, cyan, yellow, orange, teal, magenta,
         light_red, light_green, light_blue, light_cyan, light_yellow, light_magenta,
         dark_red, dark_green, dark_blue, dark_cyan, dark_yellow, dark_magenta,
-        light_grey, medium_grey, dark_grey
+        light_grey, medium_grey, dark_grey, black
     )

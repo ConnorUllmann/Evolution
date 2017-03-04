@@ -41,14 +41,6 @@ class Entity(StateMachine, Point):
             return True
         return False
 
-    @property
-    def position(self):
-        return self
-
-    @position.setter
-    def position(self, point):
-        self = point
-
     def __init__(self, x=0, y=0):
         Point.__init__(self, x, y)
         StateMachine.__init__(self)
@@ -56,22 +48,33 @@ class Entity(StateMachine, Point):
         self.id = Entity.GetId()
         Entity.Add(self)
         
-        Screen.Instance.AddUpdateFunction(Entity.__str__(self), self.Update)
-        Screen.Instance.AddRenderFunction(Entity.__str__(self), self.Render)
+        Screen.AddUpdateFunction(Entity.__str__(self), self.Update)
+        Screen.AddRenderFunction(Entity.__str__(self), self.Render)
         Screen.PutOnTop(self)
         
         self.v = Point()
         self.destroyed = False
+
+    def Destroy(self):
+        if not self.destroyed:
+            self.destroyed = True
+            Screen.RemoveUpdateFunctions(Entity.__str__(self))
+            Screen.RemoveRenderFunctions(Entity.__str__(self))
+            Entity.Remove(self)
+
+    def Update(self):
+        pass
 
     def Render(self):
         pass
 
     def __str__(self):
         return "[{}]{}".format(self.id, self.__class__.__name__)
-    
-    def Destroy(self):
-        if not self.destroyed:
-            self.destroyed = True
-            Screen.Instance.RemoveUpdateFunctions(Entity.__str__(self))
-            Screen.Instance.RemoveRenderFunctions(Entity.__str__(self))
-            Entity.Remove(self)
+
+    @property
+    def position(self):
+        return self
+
+    @position.setter
+    def position(self, point):
+        self = point

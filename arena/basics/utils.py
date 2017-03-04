@@ -39,16 +39,16 @@ def Heartbeat(x):
     x %= 1
     return 17.0351656925 * x * (1 / (x + 1) - 0.5 * x)**4 * sin(4 * pi * x)
 
-# The Sigmoid function, which describes an S shaped curve.
-# We pass the weighted sum of the inputs through this function to
-# normalise them between 0 and 1.
 def Sigmoid(x):
+    # The Sigmoid function, which describes an S shaped curve.
+    # We pass the weighted sum of the inputs through this function to
+    # normalise them between 0 and 1.
     return 1.0 / (1.0 + exp(-x))
-        
-# The derivative of the Sigmoid function.
-# This is the gradient of the Sigmoid curve.
-# It indicates how confident we are about the existing weight.
+
 def SigmoidDerivative(x):
+    # The derivative of the Sigmoid function.
+    # This is the gradient of the Sigmoid curve.
+    # It indicates how confident we are about the existing weight.
     sx = Sigmoid(x)
     return sx * (1.0 - sx)
 
@@ -58,6 +58,14 @@ def IsInt(x):
         return True
     except ValueError:
         return False
+
+def AngleDiff(a, b):
+    diff = b - a
+    while diff > pi:
+        diff -= 2 * pi
+    while diff <= -pi:
+        diff += 2 * pi
+    return diff
 
 def Cross3(a, b):
     return [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]]
@@ -123,8 +131,8 @@ def PointOnLineClosestToPoint(lineA, lineB, point, as_segment=False):
         return lineB
     return ret
 
-#Will return negative values depending on what side of (a, b) that c is on
 def AreaTriangle(a, b, c):
+    #Will return negative values depending on what side of (a, b) that c is on
     return 0.5 * (a.x * (b.y - c.y) - b.x * (a.y - c.y) + c.x * (a.y - b.y))
 
 def ColinearPointInsideLineSegment(pos, lineA, lineB):
@@ -174,20 +182,14 @@ def CircleLineCollide(center, radius, lineA, lineB, asSegment=True):
 def Torque(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])
     return r.cross(forceVector)
+
 def TorquePushVector(centerOfMass, forcePosition, forceVector):
     r = Point(forcePosition[0] - centerOfMass[0], forcePosition[1] - centerOfMass[1])
     return forceVector.proj(r)
+
 def TorquePullVector(centerOfMass, forcePosition, forceVector):
     r = (forcePosition[1] - centerOfMass[1], -forcePosition[0] + centerOfMass[0])
     return forceVector.proj(r)
-
-def AngleDiff(a, b):
-    diff = b - a
-    while diff > pi:
-        diff -= 2*pi
-    while diff <= -pi:
-        diff += 2*pi
-    return diff
 
 def Binary(x, digits=-1, asList=False):
     if type(x) is list:

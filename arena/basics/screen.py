@@ -11,50 +11,26 @@ class Screen:
     @staticmethod
     def Width():
         return Screen.Instance.width
+
     @staticmethod
     def Height():
         return Screen.Instance.height
 
-    def ClearScreen(self):
+    @staticmethod
+    def RandomPosition():
+        return Screen.Instance.randomPosition()
+    def randomPosition(self):
+        return Point(random() * self.width, random() * self.height)
+
+    @staticmethod
+    def ClearScreen():
+        Screen.Instance.clearScreen()
+    def clearScreen(self):
         self.screen.fill(self.clearColor)
 
-    def _RemoveUpdateFunctionsByKey(self, key):
-        self.updateOrder.remove(key)
-        return self.updateFunctions.pop(key, None)
-
-    def _RemoveRenderFunctionsByKey(self, key):
-        self.renderOrder.remove(key)
-        return self.renderFunctions.pop(key, None)
-        
-    def RemoveUpdateFunctions(self, key):
-        self.updateFunctionsRemoveQueue.append(str(key))
-    
-    def RemoveRenderFunctions(self, key):
-        self.renderFunctionsRemoveQueue.append(str(key))
-
-    def _AddUpdateFunction(self, info):
-        key = info[0]
-        if key not in self.updateFunctions:
-            self.updateFunctions[key] = []
-        self.updateOrder.append(key)
-        self.updateFunctions[key].append(info[1])
-        
-    def _AddRenderFunction(self, info):
-        key = info[0]
-        if key not in self.renderFunctions:
-            self.renderFunctions[key] = []
-        self.renderOrder.append(key)
-        self.renderFunctions[key].append(info[1])
-
-    def AddUpdateFunction(self, key, function):
-        self.updateFunctionsAddQueue.append([str(key), function])
-    
-    def AddRenderFunction(self, key, function):
-        self.renderFunctionsAddQueue.append([str(key), function])
-
-    #Cannot be called during a render function! Only use during updates
     @staticmethod
     def PutOnTop(key):
+        #Cannot be called during a render function! Only use during updates
         tempKey = str(key)
         if tempKey not in Screen.Instance.renderOrder:
             return False
@@ -69,36 +45,45 @@ class Screen:
     #def grid(self, *args, **kwargs):
     #    self.embed.grid(*args, **kwargs)
 
-    def __init__(self, width, height, clearColor=(0,0,0)):
+    @staticmethod
+    def Start():
+        Screen.Instance.StartHelper()
+        # Screen.Instance.threadManager.Run([Screen.Instance.threadManager.Add(lambda: Screen.Instance.StartHelper())])
+
+    def StartHelper(self):
+        while True:
+            self.Update()
+            self.Render()
+            pygame.display.update()
+
+    def __init__(self, width, height, clearColor=(0, 0, 0)):
         Screen.Instance = self
-        #self.root = root
+        # self.root = root
         self.width = width
         self.height = height
         self.clearColor = clearColor
 
-        self.keys = None
-        
         self.threadManager = ThreadManager()
-        
+
         pygame.init()
 
         self.screen = pygame.display.set_mode((self.width, self.height))
-        #self.background = pygame.Surface(self.screen.get_size())
-        #self.background = self.background.convert()
+        # self.background = pygame.Surface(self.screen.get_size())
+        # self.background = self.background.convert()
         self.screen.set_alpha(None)
-        
-        #pygame.font.init()
+
+        # pygame.font.init()
         pygame.display.init()
         pygame.display.update()
-        self.ClearScreen()
+        self.clearScreen()
 
         self.camera = Point()
 
-        #self.embed = self.Frame()
-        #os.environ['SDL_WINDOWID'] = str(self.embed.winfo_id())
-        #if platform.system == "Windows":
+        # self.embed = self.Frame()
+        # os.environ['SDL_WINDOWID'] = str(self.embed.winfo_id())
+        # if platform.system == "Windows":
         #    os.environ['SDL_VIDEODRIVER'] = 'windib'
-        
+
         self.updateFunctionsAddQueue = []
         self.renderFunctionsAddQueue = []
         self.updateFunctionsRemoveQueue = []
@@ -107,7 +92,7 @@ class Screen:
         self.renderFunctions = {}
         self.updateOrder = []
         self.renderOrder = []
-        
+
         self.objectAddQueue = []
         self.objectRemoveQueue = []
         self.objectQueue = {}
@@ -124,6 +109,112 @@ class Screen:
         self.rightMousePressed = False
         self.rightMouseReleased = False
         self.mousePosition = Point()
+
+    def Update(self):
+        self.updateKeys()
+        self.updateFunctionQueues()
+        for key in self.updateOrder:
+            for updateFunction in self.updateFunctions[key]:
+                updateFunction()
+        self.updateMouseButtonStates()
+        self.updateMousePosition()
+
+    def Render(self):
+        while len(self.renderFunctionsAddQueue) > 0:
+            self._addRenderFunction(self.renderFunctionsAddQueue.pop())
+        while len(self.renderFunctionsRemoveQueue) > 0:
+            self.removeRenderFunctionsByKey(self.renderFunctionsRemoveQueue.pop())
+        self.clearScreen()
+        for key in self.renderOrder:
+            #print("key: " + key)
+            for renderFunction in self.renderFunctions[key]:
+                renderFunction()
+
+
+    # --- Function Queues ---
+
+    @staticmethod
+    def RemoveUpdateFunctions(key):
+        Screen.Instance.removeUpdateFunctions(key)
+    def removeUpdateFunctions(self, key):
+        self.updateFunctionsRemoveQueue.append(str(key))
+
+    @staticmethod
+    def RemoveRenderFunctions(key):
+        Screen.Instance.removeRenderFunctions(key)
+    def removeRenderFunctions(self, key):
+        self.renderFunctionsRemoveQueue.append(str(key))
+
+    @staticmethod
+    def AddUpdateFunction(key, function):
+        Screen.Instance.addUpdateFunction(key, function)
+    def addUpdateFunction(self, key, function):
+        self.updateFunctionsAddQueue.append([str(key), function])
+
+    @staticmethod
+    def AddRenderFunction(key, function):
+        Screen.Instance.addRenderFunction(key, function)
+    def addRenderFunction(self, key, function):
+        self.renderFunctionsAddQueue.append([str(key), function])
+
+    def updateFunctionQueues(self):
+        while len(self.updateFunctionsAddQueue) > 0:
+            self._addUpdateFunction(self.updateFunctionsAddQueue.pop())
+        while len(self.updateFunctionsRemoveQueue) > 0:
+            self.removeUpdateFunctionsByKey(self.updateFunctionsRemoveQueue.pop())
+
+    def removeUpdateFunctionsByKey(self, key):
+        self.updateOrder.remove(key)
+        return self.updateFunctions.pop(key, None)
+
+    def removeRenderFunctionsByKey(self, key):
+        self.renderOrder.remove(key)
+        return self.renderFunctions.pop(key, None)
+
+    def _addUpdateFunction(self, info):
+        key = info[0]
+        if key not in self.updateFunctions:
+            self.updateFunctions[key] = []
+        self.updateOrder.append(key)
+        self.updateFunctions[key].append(info[1])
+
+    def _addRenderFunction(self, info):
+        key = info[0]
+        if key not in self.renderFunctions:
+            self.renderFunctions[key] = []
+        self.renderOrder.append(key)
+        self.renderFunctions[key].append(info[1])
+
+
+    # --- Inputs ---
+
+    @staticmethod
+    def MousePosition():
+        return Screen.Instance.mousePosition
+
+    @staticmethod
+    def LeftMouseDown():
+        return Screen.Instance.leftMouseDown
+
+    @staticmethod
+    def RightMouseDown():
+        return Screen.Instance.rightMouseDown
+
+    @staticmethod
+    def LeftMousePressed():
+        return Screen.Instance.leftMousePressed
+
+    @staticmethod
+    def RightMousePressed():
+        return Screen.Instance.rightMousePressed
+
+    @staticmethod
+    def LeftMouseReleased():
+        return Screen.Instance.leftMouseReleased
+
+    @staticmethod
+    def RightMouseReleased():
+        return Screen.Instance.rightMouseReleased
 
     @staticmethod
     def KeyDown(key):
@@ -168,44 +259,8 @@ class Screen:
         p = pygame.mouse.get_pos()
         self.mousePosition = Point(p[0], p[1])
 
-    def updateFunctionQueues(self):
-        while len(self.updateFunctionsAddQueue) > 0:
-            self._AddUpdateFunction(self.updateFunctionsAddQueue.pop())
-        while len(self.updateFunctionsRemoveQueue) > 0:
-            self._RemoveUpdateFunctionsByKey(self.updateFunctionsRemoveQueue.pop())
-    
-    def Update(self):
-        self.updateKeys()                   
-        self.updateFunctionQueues()
-        for key in self.updateOrder:
-            for updateFunction in self.updateFunctions[key]:
-                updateFunction()
-        self.updateMouseButtonStates()
-        self.updateMousePosition()
 
-    def Render(self):
-        while len(self.renderFunctionsAddQueue) > 0:
-            self._AddRenderFunction(self.renderFunctionsAddQueue.pop())
-        while len(self.renderFunctionsRemoveQueue) > 0:
-            self._RemoveRenderFunctionsByKey(self.renderFunctionsRemoveQueue.pop())
-        self.ClearScreen()
-        for key in self.renderOrder:
-            #print("key: " + key)
-            for renderFunction in self.renderFunctions[key]:
-                renderFunction()
-
-    def StartHelper(self):
-        while True:
-            self.keys = pygame.key.get_pressed()
-            #print(self.keys)
-            self.Update()
-            self.Render()
-            pygame.display.update()
-
-    @staticmethod
-    def Start():
-        Screen.Instance.StartHelper()
- #       Screen.Instance.threadManager.Run([Screen.Instance.threadManager.Add(lambda: Screen.Instance.StartHelper())])
+    # --- Drawing ---
 
     @staticmethod
     def DrawRect(position, dimensions, color=(255, 255, 255), thickness=1, filled=True):
@@ -223,7 +278,9 @@ class Screen:
                 y = min(max(y, 0), Screen.Instance.height)
                 Screen.Instance.screen.fill(color, (x, y, sx, sy))
         else:
-            pygame.draw.rect(Screen.Instance.screen, color, pygame.Rect(position[0] - Screen.Instance.camera.x, position[1] - Screen.Instance.camera.y, dimensions[0], dimensions[1]), thickness)
+            pygame.draw.rect(Screen.Instance.screen, color,
+                             pygame.Rect(position[0] - Screen.Instance.camera.x, position[1] - Screen.Instance.camera.y,
+                                         dimensions[0], dimensions[1]), thickness)
 
     @staticmethod
     def DrawLines(positions, color=(255, 255, 255), thickness=1):
@@ -236,55 +293,24 @@ class Screen:
             pygame.draw.lines(Screen.Instance.screen, color, False, positions, thickness)
 
     @staticmethod
-    def DrawLine(positionStart=(0,0), positionEnd=(0,0), color=(255,255,255), thickness=1):
+    def DrawLine(positionStart=(0, 0), positionEnd=(0, 0), color=(255, 255, 255), thickness=1):
         pS = (positionStart[0] - Screen.Instance.camera.x, positionStart[1] - Screen.Instance.camera.y)
         pE = (positionEnd[0] - Screen.Instance.camera.x, positionEnd[1] - Screen.Instance.camera.y)
         pygame.draw.line(Screen.Instance.screen, color, pS, pE, thickness)
-        
+
     @staticmethod
-    def DrawCircle(position=(0,0), radius=1, color=(255,255,255), thickness=0):
+    def DrawCircle(position=(0, 0), radius=1, color=(255, 255, 255), thickness=0):
         intPosition = (int(position[0] - Screen.Instance.camera.x), int(position[1] - Screen.Instance.camera.y))
         pygame.draw.circle(Screen.Instance.screen, color, intPosition, int(radius), thickness)
 
     @staticmethod
-    def DrawPoint(position=(0,0), color=(255,255,255)):
+    def DrawPoint(position=(0, 0), color=(255, 255, 255)):
         intPosition = (int(position[0] - Screen.Instance.camera.x), int(position[1] - Screen.Instance.camera.y))
         Screen.Instance.screen.set_at(intPosition, color)
 
     @staticmethod
-    def DrawText(position=(0,0), text="", color=(255,255,255), fontSize=12):
+    def DrawText(position=(0, 0), text="", color=(255, 255, 255), fontSize=12):
         intPosition = (int(position[0] - Screen.Instance.camera.x), int(position[1] - Screen.Instance.camera.y))
         font = pygame.font.Font(None, fontSize)
         textRendered = font.render(text, 1, color)
         Screen.Instance.screen.blit(textRendered, intPosition)
-
-    @staticmethod
-    def MousePosition():
-        return Screen.Instance.mousePosition
-
-    @staticmethod
-    def LeftMouseDown():
-        return Screen.Instance.leftMouseDown
-
-    @staticmethod
-    def RightMouseDown():
-        return Screen.Instance.rightMouseDown
-    
-    @staticmethod
-    def LeftMousePressed():
-        return Screen.Instance.leftMousePressed
-
-    @staticmethod
-    def RightMousePressed():
-        return Screen.Instance.rightMousePressed
-    
-    @staticmethod
-    def LeftMouseReleased():
-        return Screen.Instance.leftMouseReleased
-
-    @staticmethod
-    def RightMouseReleased():
-        return Screen.Instance.rightMouseReleased
-
-    def RandomPosition(self):
-        return Point(random() * Screen.Instance.width, random() * Screen.Instance.height)

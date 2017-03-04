@@ -20,7 +20,7 @@ def GenerateAIs():
         disrupters[-1].SetState("stunned")
 
     for i in range(15):
-        p = Screen.Instance.RandomPosition()
+        p = Screen.RandomPosition()
         swarmlings.append(Swarmling(p.x, p.y))
     # for i in range(15):
     #     p = Screen.Instance.RandomPosition()
@@ -31,7 +31,7 @@ def GenerateAIs():
     hivemind = queen.nn
     #
     for i in range(10):
-        p = Screen.Instance.RandomPosition()
+        p = Screen.RandomPosition()
         AI(p.x, p.y, None, hivemind)
 
 def UpdateGame():
@@ -65,8 +65,8 @@ def StartGame():
     #Screen(1200, 750)
     Screen(700, 500)
     PreGame()
-    Screen.Instance.AddUpdateFunction("main", UpdateGame)
-    Screen.Instance.AddRenderFunction("main", RenderGame)
+    Screen.AddUpdateFunction("main", UpdateGame)
+    Screen.AddRenderFunction("main", RenderGame)
     Screen.Start()
 
 if __name__ == '__main__':

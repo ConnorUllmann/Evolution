@@ -104,8 +104,8 @@ def RenderGame():
 def StartGame():
     Screen(800, 600)
     PreGame()
-    Screen.Instance.AddUpdateFunction("main", UpdateGame)
-    Screen.Instance.AddRenderFunction("main", RenderGame)
+    Screen.AddUpdateFunction("main", UpdateGame)
+    Screen.AddRenderFunction("main", RenderGame)
     Screen.Start()
 
 if __name__ == '__main__':

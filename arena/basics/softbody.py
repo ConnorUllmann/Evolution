@@ -7,9 +7,9 @@ from .utils import PointOnLineAtX, PointOnLineAtY, LinesIntersectionPoint, Point
 from random import random
 
 class ViscoElasticNode(Point):
+
     dampener = 0.9
     maxMomentum = 100
-    conRadius = 20
 
     def __init__(self, x, y):
         Point.__init__(self, x, y)
@@ -40,7 +40,7 @@ class ViscoElasticNode(Point):
         #     self.momentum.y = -abs(self.momentum.y)
 
     def render(self, offset):
-        Screen.DrawCircle(self + offset, 3, Color.yellow)
+        Screen.DrawCircle(self + offset, 2, Color.yellow)
 
     def contract(self):
         for rod in self.rods:
@@ -48,6 +48,7 @@ class ViscoElasticNode(Point):
             self.momentum += delta_momentum
 
 class ViscoElasticRod(Point):
+
     coeffPull = 100
 
     def __init__(self, nodeA, nodeB, color):
@@ -123,41 +124,6 @@ class Softbody(Entity, Polygon):
             rod = ViscoElasticRod(a, b, Color.orange)
             self.rods.append(rod)
 
-    def addSupportRod(self, a, b):
-        # a and b are nodes on the Softbody
-        if a in self.vertices and b in self.vertices:
-            rod = ViscoElasticRod(a, b, Color.cyan)
-            self.rodsSupport.append(rod)
-            return rod
-        return None
-
-    def addStandardSupportRods(self):
-        self.rodsSupport = []
-        for i in range(int(len(self.vertices)/2)):
-            a = self.vertices[i]
-            b = self.vertices[(i+int(len(self.vertices)/2))%len(self.vertices)]
-            self.addSupportRod(a, b)
-
-    def generateRandomSupportRods(self, count=20):
-        newSupportRods = 0
-        while newSupportRods < count:
-            aIndex = int(random() * len(self.vertices))
-            bIndex = int(random() * len(self.vertices))
-            if abs(bIndex - aIndex) > 2:
-                a = self.vertices[aIndex]
-                b = self.vertices[bIndex]
-                ab = (b - a).normalized * 0.00001
-                aTemp = self + a + ab
-                bTemp = self + b - ab
-                if self.containsLineSegment(aTemp, bTemp):
-                    self.addSupportRod(a, b)
-                    newSupportRods += 1
-
-    def putVerticesInsideScreen(self):
-        for vertex in self.vertices:
-            vertex.x = min(max(vertex.x + self.x, 0), Screen.Width()) - self.x
-            vertex.y = min(max(vertex.y + self.y, 0), Screen.Height()) - self.y
-
     def Update(self):
 
         if not self.insideScreen():
@@ -195,6 +161,41 @@ class Softbody(Entity, Polygon):
         for rod in self.rodsSupport:
             rod.span *= multiplier
 
+    def addSupportRod(self, a, b):
+        # a and b are nodes on the Softbody
+        if a in self.vertices and b in self.vertices:
+            rod = ViscoElasticRod(a, b, Color.cyan)
+            self.rodsSupport.append(rod)
+            return rod
+        return None
+
+    def addStandardSupportRods(self):
+        self.rodsSupport = []
+        for i in range(int(len(self.vertices)/2)):
+            a = self.vertices[i]
+            b = self.vertices[(i+int(len(self.vertices)/2))%len(self.vertices)]
+            self.addSupportRod(a, b)
+
+    def generateRandomSupportRods(self, count=20):
+        newSupportRods = 0
+        while newSupportRods < count:
+            aIndex = int(random() * len(self.vertices))
+            bIndex = int(random() * len(self.vertices))
+            if abs(bIndex - aIndex) > 2:
+                a = self.vertices[aIndex]
+                b = self.vertices[bIndex]
+                ab = (b - a).normalized * 0.00001
+                aTemp = self + a + ab
+                bTemp = self + b - ab
+                if self.containsLineSegment(aTemp, bTemp):
+                    self.addSupportRod(a, b)
+                    newSupportRods += 1
+
+    def putVerticesInsideScreen(self):
+        for vertex in self.vertices:
+            vertex.x = min(max(vertex.x + self.x, 0), Screen.Width()) - self.x
+            vertex.y = min(max(vertex.y + self.y, 0), Screen.Height()) - self.y
+
     def moveNodesAroundMouse(self):
         for node in self.vertices:
             mouseRelative = Screen.MousePosition() - self
@@ -204,8 +205,9 @@ class Softbody(Entity, Polygon):
                 node.x = pt.x
                 node.y = pt.y
 
-    #Returns list of lists of vertices and a list of rods whose first element is a point that lies on one of the new polygons
     def splitTraverse(self, lineA, lineB):
+        # Returns list of lists of vertices and a list of rods whose first element is a point that lies on one of the new polygons
+
         if len(self) <= 0:
             #print("EXIT - No vertices!")
             return [[[]], []]
