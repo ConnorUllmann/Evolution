@@ -39,11 +39,11 @@ class Point:
         return self.x * other[1] - self.y * other[0]
 
     def proj(self, other):
-        return self.dot(other) / other.lengthSq * other
+        return self.dot(other) / max(other.lengthSq, 0.0000001) * other
 
     def reflect(self, normal):
         n = Point(normal.y, -normal.x)
-        return self - 2 * self.dot(n) / n.lengthSq * n
+        return self - 2 * self.dot(n) / max(n.lengthSq, 0.0000001) * n
 
     @property
     def x(self):

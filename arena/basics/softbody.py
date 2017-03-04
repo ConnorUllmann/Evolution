@@ -3,12 +3,11 @@ from .point import Point
 from .screen import Screen
 from .color import Color
 from .entity import Entity
-from .utils import PointOnLineAtX, PointOnLineAtY, LinesIntersectionPoint, AreaTriangle
+from .utils import PointOnLineAtX, PointOnLineAtY, LinesIntersectionPoint, PointOnLineClosestToPoint, RectanglesCollide
 
 class ViscoElasticNode(Point):
-    gravity = 0.01
     dampener = 0.9
-    maxMomentum = 10
+    maxMomentum = 100
     conRadius = 20
 
     def __init__(self, x, y):
@@ -30,14 +29,14 @@ class ViscoElasticNode(Point):
         self.x += self.momentum.x / self.mass
         self.y += self.momentum.y / self.mass
 
-        # if self.x > Screen.Width():
-        #     self.x = Screen.Width()
         # if self.x < 0:
-        #     self.x = 0
-        # if self.y > Screen.Height():
-        #     self.y = Screen.Height()
+        #     self.momentum.x = abs(self.momentum.x)
+        # if self.x > Screen.Width():
+        #     self.momentum.x = -abs(self.momentum.x)
         # if self.y < 0:
-        #     self.y = 0
+        #     self.momentum.y = abs(self.momentum.y)
+        # if self.y > Screen.Height():
+        #     self.momentum.y = -abs(self.momentum.y)
 
     def render(self, offset):
         Screen.DrawCircle(self + offset, 3, Color.yellow)
@@ -46,8 +45,6 @@ class ViscoElasticNode(Point):
         for rod in self.rods:
             delta_momentum = (self - rod).normalized * rod.force
             self.momentum += delta_momentum
-
-
 
 class ViscoElasticRod(Point):
     coeffPull = 100
@@ -62,10 +59,9 @@ class ViscoElasticRod(Point):
 
         self.force = 0
         self.nodes = [nodeA, nodeB]
-        self.span = (nodeA - nodeB).length
-        if self.span <= 0:
-            self.span = 0.00001
-            self.destroy()
+
+        #Having a minimum on the span helps with the vertices that freak out when they're too close together
+        self.span = max(10, (nodeA - nodeB).length)
 
     def destroy(self):
         for node in self.nodes:
@@ -90,6 +86,9 @@ class ViscoElasticRod(Point):
         self.y = p.y
 
 class Softbody(Entity, Polygon):
+
+    friction = 0.95
+    gravity = 1
 
     @staticmethod
     def NewFromPolygon(polygon):
@@ -131,21 +130,54 @@ class Softbody(Entity, Polygon):
             rod = ViscoElasticRod(a, c, Color.cyan)
             self.rodsSupport.append(rod)
 
+    def GetLocalBoundingRectangle(self):
+        if len(self.vertices) <= 0:
+            return [0, 0, 0, 0]
+        xmin = self.vertices[0].x
+        xmax = self.vertices[0].x
+        ymin = self.vertices[0].y
+        ymax = self.vertices[0].y
+        for i in range(1, len(self.vertices)):
+            vertex = self.vertices[i]
+            xmin = min(xmin, vertex.x)
+            xmax = max(xmax, vertex.x)
+            ymin = min(ymin, vertex.y)
+            ymax = max(ymax, vertex.y)
+        return [xmin, ymin, xmax - xmin, ymax - ymin]
+
+    def CollidesRectangle(self, ax, ay, aw, ah):
+        boundingRect = self.GetLocalBoundingRectangle()
+        return RectanglesCollide(self.x + boundingRect[0], self.y + boundingRect[1], boundingRect[2], boundingRect[3], ax, ay, aw, ah)
+
+    def IsInsideScreen(self):
+        return self.CollidesRectangle(0, 0, Screen.Width(), Screen.Height())
+
+    def PutVerticesInsideScreen(self):
+        for vertex in self.vertices:
+            vertex.x = min(max(vertex.x + self.x, 0), Screen.Width()) - self.x
+            vertex.y = min(max(vertex.y + self.y, 0), Screen.Height()) - self.y
 
     def Update(self):
+
+        if not self.IsInsideScreen():
+            self.Destroy()
+            return
+
+        #self.v.y += Softbody.gravity
+
+        self.x += self.v.x
+        self.y += self.v.y
+
+        self.v *= Softbody.friction
+
         for rod in self.rods:
             rod.update()
         for rod in self.rodsSupport:
             rod.update()
         for node in self.vertices:
             node.update()
-        for node in self.vertices:
-            mouseRelative = Screen.Instance.MousePosition() - self
-            nodeToMouse = mouseRelative - node
-            if nodeToMouse.length < 25:
-                pt = node - max(1 - nodeToMouse.length / 25, 0) * nodeToMouse.normalized * 10
-                node.x = pt.x
-                node.y = pt.y
+        self.MoveNodesAroundMouse()
+        # self.PutVerticesInsideScreen()
 
     def Render(self):
         for rod in self.rods:
@@ -155,10 +187,19 @@ class Softbody(Entity, Polygon):
         for node in self.vertices:
             node.render(self)
 
+    def MoveNodesAroundMouse(self):
+        for node in self.vertices:
+            mouseRelative = Screen.MousePosition() - self
+            nodeToMouse = mouseRelative - node
+            if nodeToMouse.length < 60:
+                pt = node - max(1 - nodeToMouse.length / 60, 0) * nodeToMouse.normalized * 10
+                node.x = pt.x
+                node.y = pt.y
+
     #Returns list of lists of vertices and a list of rods whose first element is a point that lies on one of the new polygons
     def splitTraverse(self, lineA, lineB):
         if len(self) <= 0:
-            print("EXIT - No vertices!")
+            #print("EXIT - No vertices!")
             return [[[]], []]
 
         if lineA.y == lineB.y:
@@ -190,14 +231,8 @@ class Softbody(Entity, Polygon):
         intersections.sort(key=lambda x: (x[0] - m).lengthSq)
 
         if len(intersections) <= 0:
-            print("EXIT - No intersections; vertices: {}".format(len(self.vertices)))
-            vertices = []
-            for vertex in self.vertices:
-                vertices.append(vertex + self)
-            nodePairs = []
-            for rod in self.rodsSupport:
-                nodePairs.append((rod.nodes[0] + self, rod.nodes[1] + self))
-            return [[vertices], nodePairs]
+            # print("EXIT - No intersections; vertices: {}".format(len(self.vertices)))
+            return [None, None]
 
         rodsSupportEnds = []
         pointsToInsert = {}
@@ -222,14 +257,13 @@ class Softbody(Entity, Polygon):
             rodIntersectionsReverseCopy = list(Point.Clone(pt) for pt in rodIntersections)
             rodIntersectionsReverseCopy.reverse()
 
-#Duplicate values in rodIntersections for some reason...
             pointsToInsert[str(c[0])+str(d[0])] = rodIntersections
             pointsToInsert[str(d[0])+str(c[0])] = rodIntersectionsReverseCopy
 
-        for tempKey in pointsToInsert:
-            print("[{}]".format(tempKey))
-            for vertex in pointsToInsert[tempKey]:
-                print(" {}".format(vertex))
+        # for tempKey in pointsToInsert:
+        #     print("[{}]".format(tempKey))
+        #     for vertex in pointsToInsert[tempKey]:
+        #         print(" {}".format(vertex))
 
         polygonsPoints = [[]]
         i = unchecked[0]
@@ -238,7 +272,7 @@ class Softbody(Entity, Polygon):
                 unchecked.remove(i)
 
             if len(polygonsPoints[-1]) > 0 and polygonsPoints[-1][0] == points[i]:
-                print("New polygon!")
+                #print("New polygon!")
                 if len(unchecked) > 0:
                     polygonsPoints.append([])
                     i = unchecked[0]
@@ -248,7 +282,7 @@ class Softbody(Entity, Polygon):
             j = (i+1)%len(points)
 
             polygonsPoints[-1].append(Point.Clone(points[i]))
-            print("[{}] {}".format(i, points[i]))
+            #print("[{}] {}".format(i, points[i]))
 
             for intersectionInfo in intersections:
                 if intersectionInfo[0] == points[i]:
@@ -259,21 +293,25 @@ class Softbody(Entity, Polygon):
 
                     key = str(points[i]) + str(intersectionInfo[2])
                     if key in pointsToInsert:
-                        print("key = {}".format(key))
+                        #print("key = {}".format(key))
                         for pointToInsert in pointsToInsert[key]:
-                            print(pointToInsert)
+                            #print(pointToInsert)
                             polygonsPoints[-1].append(pointToInsert)
                     polygonsPoints[-1].append(Point.Clone(intersectionInfo[2]))
                     break
             i = j
 
     def splitOnce(self, lineA, lineB):
-        print(" --- NEW SPLIT --- ")
+        #print(" --- NEW SPLIT --- ")
         polygonsPoints, rodsSupportEnds = self.splitTraverse(lineA, lineB)
         softbodies = []
-        print("Polygons: {}".format(len(polygonsPoints)))
+
+        if polygonsPoints == None:
+            return [self]
+
+        #print("Polygons: {}".format(len(polygonsPoints)))
         for polygonPoints in polygonsPoints:
-            print(polygonPoints)
+            #print(polygonPoints)
             softbodies.append(Softbody.NewFromAbsolutePositions(polygonPoints))
         print("Softbodies: {}".format(len(softbodies)))
         for rodEnds in rodsSupportEnds:
@@ -282,9 +320,9 @@ class Softbody(Entity, Polygon):
                 rodNodeB = None
                 for vertex in softbody.vertices:
                     vertPoint = vertex + softbody
-                    print("rodEnds[0]: " + str(rodEnds[0]))
-                    print("rodEnds[1]: " + str(rodEnds[1]))
-                    print("vertPoint: " + str(vertPoint))
+                    #print("rodEnds[0]: " + str(rodEnds[0]))
+                    #print("rodEnds[1]: " + str(rodEnds[1]))
+                    #print("vertPoint: " + str(vertPoint))
                     if rodNodeA is None:
                         if rodEnds[0] == vertPoint:
                             rodNodeA = vertex
@@ -314,5 +352,15 @@ class Softbody(Entity, Polygon):
                 if rodNodeA is not None and rodNodeB is not None:
                     softbody.rodsSupport.append(ViscoElasticRod(rodNodeA, rodNodeB, Color.cyan))
                     break
+
+        for softbody in softbodies:
+            totalMass = 0
+            centerOfMass = softbody.centerOfMassAbsolute()
+            direction = (centerOfMass - PointOnLineClosestToPoint(lineA, lineB, centerOfMass)).normalized
+            for vertex in softbody.vertices:
+                totalMass += vertex.mass
+                vertex.momentum = 1000 * max(0, 25 - (PointOnLineClosestToPoint(lineA, lineB, vertex) - vertex).lengthSq) * direction
+
+            softbody.v = self.v + 150 / totalMass * direction
 
         return softbodies

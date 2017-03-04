@@ -116,6 +116,15 @@ class Screen:
         self.keysReleased = []
         self.keysDown = []
 
+        self.mouseButtonsDown = []
+        self.leftMouseDown = False
+        self.leftMousePressed = False
+        self.leftMouseReleased = False
+        self.rightMouseDown = False
+        self.rightMousePressed = False
+        self.rightMouseReleased = False
+        self.mousePosition = Point()
+
     @staticmethod
     def KeyDown(key):
         return Screen.Instance.keyDown(key)
@@ -145,6 +154,20 @@ class Screen:
             elif event.type == pygame.KEYUP:
                 self.keysReleased[event.key] = 1
 
+    def updateMouseButtonStates(self):
+        mouseButtonsDownPrevious = self.mouseButtonsDown[:] if len(self.mouseButtonsDown) > 0 else [0]*3
+        self.mouseButtonsDown = pygame.mouse.get_pressed()
+        self.leftMouseDown = self.mouseButtonsDown[0]
+        self.rightMouseDown = self.mouseButtonsDown[2]
+        self.leftMousePressed = not mouseButtonsDownPrevious[0] and self.leftMouseDown
+        self.leftMouseReleased = mouseButtonsDownPrevious[0] and not self.leftMouseDown
+        self.rightMousePressed = not mouseButtonsDownPrevious[2] and self.rightMouseDown
+        self.rightMouseReleased = mouseButtonsDownPrevious[2] and not self.rightMouseDown
+
+    def updateMousePosition(self):
+        p = pygame.mouse.get_pos()
+        self.mousePosition = Point(p[0], p[1])
+
     def updateFunctionQueues(self):
         while len(self.updateFunctionsAddQueue) > 0:
             self._AddUpdateFunction(self.updateFunctionsAddQueue.pop())
@@ -157,6 +180,8 @@ class Screen:
         for key in self.updateOrder:
             for updateFunction in self.updateFunctions[key]:
                 updateFunction()
+        self.updateMouseButtonStates()
+        self.updateMousePosition()
 
     def Render(self):
         while len(self.renderFunctionsAddQueue) > 0:
@@ -233,9 +258,33 @@ class Screen:
         textRendered = font.render(text, 1, color)
         Screen.Instance.screen.blit(textRendered, intPosition)
 
-    def MousePosition(self):
-        p = pygame.mouse.get_pos()
-        return Point(p[0], p[1])
+    @staticmethod
+    def MousePosition():
+        return Screen.Instance.mousePosition
+
+    @staticmethod
+    def LeftMouseDown():
+        return Screen.Instance.leftMouseDown
+
+    @staticmethod
+    def RightMouseDown():
+        return Screen.Instance.rightMouseDown
+    
+    @staticmethod
+    def LeftMousePressed():
+        return Screen.Instance.leftMousePressed
+
+    @staticmethod
+    def RightMousePressed():
+        return Screen.Instance.rightMousePressed
+    
+    @staticmethod
+    def LeftMouseReleased():
+        return Screen.Instance.leftMouseReleased
+
+    @staticmethod
+    def RightMouseReleased():
+        return Screen.Instance.rightMouseReleased
 
     def RandomPosition(self):
         return Point(random() * Screen.Instance.width, random() * Screen.Instance.height)

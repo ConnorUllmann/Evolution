@@ -85,8 +85,8 @@ def UpdateGame():
                 polygon.visible = False
 
 
-    polygons[0].x = Screen.Instance.MousePosition().x
-    polygons[0].y = Screen.Instance.MousePosition().y
+    polygons[0].x = Screen.MousePosition().x
+    polygons[0].y = Screen.MousePosition().y
 
 def RenderGame():
     global mergePolygons, intersectPolygons, cuttingLines
