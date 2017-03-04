@@ -45,9 +45,6 @@ class Point:
     def length(self):
         return sqrt(self.lengthSq)
 
-    def __len__(self):
-        return int(self.length)
-
     @property
     def radians(self):
         return atan2(self.y, self.x)
@@ -97,6 +94,9 @@ class Point:
 
     def distanceTo(self, other):
         return (self - other).length
+
+    def __len__(self):
+        return int(self.length)
 
     def __abs__(self):
         return Point(abs(self.x), abs(self.y))
