@@ -7,14 +7,21 @@ class Gunner(Entity):
         Entity.__init__(self, x, y)
         self.maxV = 3
 
+        self.splitTimer = 0
+        self.splitTimerMax = 0.5
+
     def Update(self):
         self.input()
         self.x += self.v.x
         self.y += self.v.y
 
+        self.splitTimer = max(self.splitTimer - Screen.DeltaTime(), 0)
+
     def Render(self):
         Screen.DrawCircle(self, 10, Color.light_green)
-        Screen.DrawRay(self, Screen.MousePosition(), Color.red, 1)
+        if self.splitTimer > 0:
+            thickness = int((self.splitTimer * 4)**8 / 8)
+            Screen.DrawRay(self, Screen.MousePosition(), Color.red, thickness)
 
     def input(self):
         acc = 1
@@ -32,7 +39,8 @@ class Gunner(Entity):
 
         self.v *= 0.9
 
-        if Screen.KeyReleased(pygame.K_SPACE):
+        if Screen.LeftMousePressed():
+            self.splitTimer = self.splitTimerMax
             softbodies = Entity.GetAllEntitiesOfType("Softbody")
             for softbody in softbodies:
                 softbody.splitOnceAndDestroy(self, Screen.MousePosition())

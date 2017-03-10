@@ -19,18 +19,33 @@ class Screen:
 
     @staticmethod
     def RayEndpoint(positionStart, positionToward, margin=0):
-        vector = (positionToward - positionStart).normalized * (Point(Screen.Width() - 2 * margin, Screen.Height() - 2 * margin).length)
+        vector = (positionToward - positionStart).normalized * 1000000000
         pts = [
             Point(margin, margin),
             Point(Screen.Width() - margin, margin),
             Point(Screen.Width() - margin, Screen.Height() - margin),
             Point(margin, Screen.Height() - margin)
         ]
+        collisionPoints = []
         for i in range(len(pts)):
             pt = LinesIntersectionPoint(positionStart, positionStart + vector, pts[i], pts[(i+1)%len(pts)], True)
             if pt is not None:
-                return pt
-        return vector
+                collisionPoints.append(pt)
+
+        if len(collisionPoints) == 1:
+            return collisionPoints[0]
+
+        maxDistanceSq = None
+        maxDistanceCollisionPoint = None
+        for collisionPoint in collisionPoints:
+            distanceSq = (collisionPoint - positionStart).lengthSq
+            if maxDistanceSq is None or distanceSq > maxDistanceSq:
+                maxDistanceSq = distanceSq
+                maxDistanceCollisionPoint = collisionPoint
+        if maxDistanceCollisionPoint is not None:
+            return maxDistanceCollisionPoint
+
+        return positionStart + vector
 
     @staticmethod
     def RandomPosition():
@@ -92,6 +107,9 @@ class Screen:
         self.height = height
         self.clearColor = clearColor
 
+        self.lastTime = pygame.time.get_ticks()
+        self.delta = 0
+
         self.threadManager = ThreadManager()
 
         pygame.init()
@@ -145,6 +163,7 @@ class Screen:
             function()
 
     def Update(self):
+        self.updateDeltaTime()
         self.updateKeys()
         self.updateFunctionQueues()
         for key in self.updateOrder:
@@ -299,6 +318,16 @@ class Screen:
         p = pygame.mouse.get_pos()
         self.mousePosition = Point(p[0], p[1])
 
+    # --- Time ---
+
+    @staticmethod
+    def DeltaTime():
+        return Screen.Instance.delta
+
+    def updateDeltaTime(self):
+        _time = pygame.time.get_ticks()
+        self.delta = (_time - self.lastTime) / 1000.0
+        self.lastTime = _time
 
     # --- Drawing ---
 
