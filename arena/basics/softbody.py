@@ -51,19 +51,22 @@ class ViscoElasticRod(Point):
 
     coeffPull = 100
 
-    def __init__(self, nodeA, nodeB, color):
+    def __init__(self, nodeA, nodeB, color, spanMin=20):
         self.color = color
         position = (nodeA + nodeB) / 2
         Point.__init__(self, position.x, position.y)
+        self.spanMin = spanMin
 
         nodeA.rods.append(self)
         nodeB.rods.append(self)
 
         self.force = 0
         self.nodes = [nodeA, nodeB]
+        self.resetSpan()
 
+    def resetSpan(self):
         #Having a minimum on the span helps with the vertices that freak out when they're too close together
-        self.span = max(10, (nodeA - nodeB).length)
+        self.span = max(self.spanMin, (self.nodes[0] - self.nodes[1]).length)
 
     def destroy(self):
         for node in self.nodes:
@@ -121,8 +124,7 @@ class Softbody(Entity, Polygon):
         for i in range(len(self.vertices)):
             a = self.vertices[i]
             b = self.vertices[(i + 1) % len(self.vertices)]
-            rod = ViscoElasticRod(a, b, Color.orange)
-            self.rods.append(rod)
+            self.addRod(a, b)
 
     def Update(self):
 
@@ -143,7 +145,7 @@ class Softbody(Entity, Polygon):
             rod.update()
         for node in self.vertices:
             node.update()
-        self.moveNodesAroundMouse()
+        # self.moveNodesAroundMouse()
         # self.putVerticesInsideScreen()
 
     def Render(self):
@@ -176,7 +178,7 @@ class Softbody(Entity, Polygon):
             b = self.vertices[(i+int(len(self.vertices)/2))%len(self.vertices)]
             self.addSupportRod(a, b)
 
-    def generateRandomSupportRods(self, count=20):
+    def addRandomSupportRods(self, count=20):
         newSupportRods = 0
         while newSupportRods < count:
             aIndex = int(random() * len(self.vertices))
@@ -205,6 +207,49 @@ class Softbody(Entity, Polygon):
                 node.x = pt.x
                 node.y = pt.y
 
+    def addRod(self, a, b):
+        self.rods.append(ViscoElasticRod(a, b, Color.orange))
+
+    def removeRod(self, rod):
+        if rod in self.rods:
+            self.rods.remove(rod)
+        elif rod in self.rodsSupport:
+            self.rodsSupport.remove(rod)
+
+    def removeVertexAt(self, i):
+        ai = (i+len(self.vertices)-1)%len(self.vertices)
+        bi = (i+1)%len(self.vertices)
+        a = self.vertices[ai]
+        b = self.vertices[bi]
+        vertex = Polygon.removeVertexAt(self, i)
+        rodsToRemove = []
+        for rod in self.rods:
+            for i in range(len(rod.nodes)):
+                j = (i + 1) % len(rod.nodes)
+                if vertex == rod.nodes[i]:
+                    if rod.nodes[i] != a and rod.nodes[j] != a and abs(self.vertices.index(rod.nodes[j]) - ai) > 1:
+                        rod.nodes[i] = a
+                        rod.resetSpan()
+                    elif rod.nodes[i] != b and rod.nodes[j] != b and abs(self.vertices.index(rod.nodes[j]) - bi) > 1:
+                        rod.nodes[i] = b
+                        rod.resetSpan()
+                    else:
+                        rodsToRemove.append(rod)
+        for rod in self.rodsSupport:
+            for i in range(len(rod.nodes)):
+                if vertex == rod.nodes[i]:
+                    j = (i + 1) % len(rod.nodes)
+                    if rod.nodes[i] != a and rod.nodes[j] != a and abs(self.vertices.index(rod.nodes[j]) - ai) > 1:
+                        rod.nodes[i] = a
+                        rod.resetSpan()
+                    elif rod.nodes[i] != b and rod.nodes[j] != b and abs(self.vertices.index(rod.nodes[j]) - bi) > 1:
+                        rod.nodes[i] = b
+                        rod.resetSpan()
+                    else:
+                        rodsToRemove.append(rod)
+        for rod in rodsToRemove:
+            self.removeRod(rod)
+
     def splitTraverse(self, lineA, lineB):
         # Returns list of lists of vertices and a list of rods whose first element is a point that lies on one of the new polygons
 
@@ -212,16 +257,46 @@ class Softbody(Entity, Polygon):
             #print("EXIT - No vertices!")
             return [[[]], []]
 
-        if lineA.y == lineB.y:
-            xmin = self.minX - 10
-            xmax = self.maxX + 10
-            m = PointOnLineAtX(lineA, lineB, xmin)
-            n = PointOnLineAtX(lineA, lineB, xmax)
-        else:
-            ymin = self.minY - 10
-            ymax = self.maxY + 10
-            m = PointOnLineAtY(lineA, lineB, ymin)
-            n = PointOnLineAtY(lineA, lineB, ymax)
+        type = "RAY"
+        if type == "LINE":
+            if lineA.y == lineB.y:
+                xmin = self.minX - 10
+                xmax = self.maxX + 10
+                m = PointOnLineAtX(lineA, lineB, xmin)
+                n = PointOnLineAtX(lineA, lineB, xmax)
+            else:
+                ymin = self.minY - 10
+                ymax = self.maxY + 10
+                m = PointOnLineAtY(lineA, lineB, ymin)
+                n = PointOnLineAtY(lineA, lineB, ymax)
+        elif type == "RAY":
+            if self.contains(lineA):
+                m = lineA
+                if lineA.x == lineB.x:
+                    n = PointOnLineAtY(lineA, lineB, self.maxY + 10)
+                else:
+                    n = PointOnLineAtX(lineA, lineB, self.maxX + 10)
+            else:
+                if lineA.y == lineB.y:
+                    xmin = self.minX - 10
+                    xmax = self.maxX + 10
+                    if lineA.x < lineB.x:
+                        m = lineA
+                        n = PointOnLineAtX(lineA, lineB, xmax)
+                    else:
+                        m = lineA
+                        n = PointOnLineAtX(lineA, lineB, xmin)
+                else:
+                    ymin = self.minY - 10
+                    ymax = self.maxY + 10
+                    pmin = PointOnLineAtY(lineA, lineB, ymin)
+                    pmax = PointOnLineAtY(lineA, lineB, ymax)
+                    if lineA.y < lineB.y:
+                        m = lineA
+                        n = pmax
+                    else:
+                        m = lineA
+                        n = pmin
 
         vertices = self.verticesAbsolute()
 
@@ -373,4 +448,11 @@ class Softbody(Entity, Polygon):
 
             softbody.v = self.v + 400 / totalMass * direction
 
+        return softbodies
+
+    def splitOnceAndDestroy(self, lineA, lineB):
+        softbodies = self.splitOnce(lineA, lineB)
+        if len(softbodies) == 1 and softbodies[0] == self:
+            return softbodies
+        self.Destroy()
         return softbodies

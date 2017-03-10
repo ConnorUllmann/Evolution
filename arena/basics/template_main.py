@@ -1,22 +1,13 @@
 from basics import Screen
-import pygame
 
-
-def PreGame():
-    pygame.display.set_caption("Untitled")
-
-def UpdateGame():
+def Begin():
     pass
 
-def RenderGame():
+def Update():
     pass
 
-def StartGame():
-    Screen(640, 480)
-    PreGame()
-    Screen.AddUpdateFunction("main", UpdateGame)
-    Screen.AddRenderFunction("main", RenderGame)
-    Screen.Start()
+def Render():
+    pass
 
 if __name__ == '__main__':
-    StartGame()
+    Screen.StartGame(Begin, Update, Render)

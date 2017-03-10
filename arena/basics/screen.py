@@ -3,6 +3,7 @@ from tkinter import *
 from random import randint, random
 from .thread_manager import ThreadManager
 from .point import Point
+from .utils import PointOnLineAtX, PointOnLineAtY, LinesIntersectionPoint
 
 class Screen:
 
@@ -15,6 +16,21 @@ class Screen:
     @staticmethod
     def Height():
         return Screen.Instance.height
+
+    @staticmethod
+    def RayEndpoint(positionStart, positionToward, margin=0):
+        vector = (positionToward - positionStart).normalized * (Point(Screen.Width() - 2 * margin, Screen.Height() - 2 * margin).length)
+        pts = [
+            Point(margin, margin),
+            Point(Screen.Width() - margin, margin),
+            Point(Screen.Width() - margin, Screen.Height() - margin),
+            Point(margin, Screen.Height() - margin)
+        ]
+        for i in range(len(pts)):
+            pt = LinesIntersectionPoint(positionStart, positionStart + vector, pts[i], pts[(i+1)%len(pts)], True)
+            if pt is not None:
+                return pt
+        return vector
 
     @staticmethod
     def RandomPosition():
@@ -51,10 +67,23 @@ class Screen:
         # Screen.Instance.threadManager.Run([Screen.Instance.threadManager.Add(lambda: Screen.Instance.StartHelper())])
 
     def StartHelper(self):
+        self.Begin()
         while True:
             self.Update()
             self.Render()
             pygame.display.update()
+
+    @staticmethod
+    def StartGame(beginFunction=None, updateFunction=None, renderFunction=None, title="Untitled", width=800, height=600):
+        Screen(width, height)
+        pygame.display.set_caption(title)
+        if beginFunction is not None:
+            Screen.AddBeginFunction(beginFunction)
+        if updateFunction is not None:
+            Screen.AddUpdateFunction("main", updateFunction)
+        if renderFunction is not None:
+            Screen.AddRenderFunction("main", renderFunction)
+        Screen.Start()
 
     def __init__(self, width, height, clearColor=(0, 0, 0)):
         Screen.Instance = self
@@ -88,6 +117,7 @@ class Screen:
         self.renderFunctionsAddQueue = []
         self.updateFunctionsRemoveQueue = []
         self.renderFunctionsRemoveQueue = []
+        self.beginFunctions = []
         self.updateFunctions = {}
         self.renderFunctions = {}
         self.updateOrder = []
@@ -109,6 +139,10 @@ class Screen:
         self.rightMousePressed = False
         self.rightMouseReleased = False
         self.mousePosition = Point()
+
+    def Begin(self):
+        for function in self.beginFunctions:
+            function()
 
     def Update(self):
         self.updateKeys()
@@ -156,6 +190,12 @@ class Screen:
         Screen.Instance.addRenderFunction(key, function)
     def addRenderFunction(self, key, function):
         self.renderFunctionsAddQueue.append([str(key), function])
+
+    @staticmethod
+    def AddBeginFunction(function):
+        Screen.Instance.addBeginFunction(function)
+    def addBeginFunction(self, function):
+        self.beginFunctions.append(function)
 
     def updateFunctionQueues(self):
         while len(self.updateFunctionsAddQueue) > 0:
@@ -284,7 +324,7 @@ class Screen:
 
     @staticmethod
     def DrawLines(positions, color=(255, 255, 255), thickness=1):
-        if Screen.Instance.camera.x != 0 or Screen.Instance.camera.y != 0:
+        if True: #Screen.Instance.camera.x != 0 or Screen.Instance.camera.y != 0:
             p = []
             for x in positions:
                 p.append((x[0] - Screen.Instance.camera.x, x[1] - Screen.Instance.camera.y))
@@ -293,10 +333,18 @@ class Screen:
             pygame.draw.lines(Screen.Instance.screen, color, False, positions, thickness)
 
     @staticmethod
+    def DrawPolygon(vertices, color=(255, 255, 255), thickness=1):
+        pygame.draw.polygon(Screen.Instance.screen, color, vertices, thickness)
+
+    @staticmethod
     def DrawLine(positionStart=(0, 0), positionEnd=(0, 0), color=(255, 255, 255), thickness=1):
         pS = (positionStart[0] - Screen.Instance.camera.x, positionStart[1] - Screen.Instance.camera.y)
         pE = (positionEnd[0] - Screen.Instance.camera.x, positionEnd[1] - Screen.Instance.camera.y)
         pygame.draw.line(Screen.Instance.screen, color, pS, pE, thickness)
+
+    @staticmethod
+    def DrawRay(positionStart=(0, 0), positionToward=(0, 0), color=(255, 255, 255), thickness=1):
+        Screen.DrawLine(positionStart, Screen.RayEndpoint(positionStart, positionToward), color, thickness)
 
     @staticmethod
     def DrawCircle(position=(0, 0), radius=1, color=(255, 255, 255), thickness=0):

@@ -33,14 +33,23 @@ class Polygon(Point):
         Point.__init__(self, x, y)
         self.vertices = vertices
 
+    def perimeter(self):
+        perimeter = 0
+        count = len(self.vertices)
+        for i in range(count):
+            j = (i+1)%count
+            a = self.vertices[i]
+            b = self.vertices[j]
+            perimeter += (a - b).length
+        return perimeter
+
     def renderPolygon(self, color, thickness):
         Screen.DrawCircle(self, 3, color)
         if len(self.vertices) > 1:
             verticesTemp = []
             for vertex in self.vertices:
                 verticesTemp.append((self.x + vertex.x, self.y + vertex.y))
-            verticesTemp.append(verticesTemp[0])
-            Screen.DrawLines(verticesTemp, color, thickness)
+            Screen.DrawPolygon(verticesTemp, color, thickness)
             count = len(self)
             for i in range(count):
                 Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
@@ -269,6 +278,9 @@ class Polygon(Point):
                 polygonsNew.extend(_polygon.splitOnce(pair[0], pair[1]))
             polygons = polygonsNew
         return polygons
+
+    def removeVertexAt(self, i):
+        return self.vertices.pop(i)
 
     @staticmethod
     def AbsolutePolygonPointPositionsAndIntersections(A, B, merge, withIncomingIntersections):

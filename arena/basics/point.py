@@ -41,9 +41,17 @@ class Point:
     def lengthSq(self):
         return self.x**2 + self.y**2
 
+    @lengthSq.setter
+    def lengthSq(self, lengthSq):
+        return self.normalized * sqrt(lengthSq)
+
     @property
     def length(self):
         return sqrt(self.lengthSq)
+
+    @length.setter
+    def length(self, length):
+        return self.normalized * length
 
     @property
     def radians(self):

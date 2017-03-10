@@ -73,15 +73,15 @@ def Cross3(a, b):
 def CirclesCollide(a_pos, a_radius, b_pos, b_radius):
     return (a_pos - b_pos).lengthSq <= (a_radius + b_radius)**2
 
+def RectanglesCollide(ax, ay, aw, ah, bx, by, bw, bh):
+    return ax + aw >= bx and bx + bw >= ax and ay + ah >= by and by + bh >= ay
+
 def LinesIntersect(m, n, t, u):
     det = (n[0] - m[0]) * (u[1] - t[1]) - (u[0] - t[0]) * (n[1] - m[1])
     if det == 0:
         return False
     return 0 < ((u[1] - t[1]) * (u[0] - m[0]) + (t[0] - u[0]) * (u[1] - m[1])) < det and \
            0 < ((m[1] - n[1]) * (u[0] - m[0]) + (n[0] - m[0]) * (u[1] - m[1])) < det
-
-def RectanglesCollide(ax, ay, aw, ah, bx, by, bw, bh):
-    return ax + aw >= bx and bx + bw >= ax and ay + ah >= by and by + bh >= ay
 
 def LinesIntersectionPoint(A, B, E, F, as_seg = True):
     if as_seg and not RectanglesCollide(min(A[0], B[0]), min(A[1], B[1]), abs(A[0]-B[0]), abs(A[1]-B[1]), min(E[0], F[0]), min(E[1], F[1]), abs(E[0]-F[0]), abs(E[1]-F[1])):

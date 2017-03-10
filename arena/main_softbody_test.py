@@ -10,9 +10,9 @@ mouseClickPosition = None
 softbodies = []
 def BeginGame():
     global softbodies
-    softbodies.append(Softbody(Screen.Width()/2, Screen.Height()/2, [Point(-100, 0), Point(-100, -100), Point(0, -100), Point(100, -100),
-                                   Point(25, 0), Point(100, 100), Point(0, 100), Point(-100, 100)]))
-    softbodies[0].addStandardSupportRods()
+    # softbodies.append(Softbody(Screen.Width()/2, Screen.Height()/2, [Point(-100, 0), Point(-100, -100), Point(0, -100), Point(100, -100),
+    #                                Point(25, 0), Point(100, 100), Point(0, 100), Point(-100, 100)]))
+    # softbodies[0].addStandardSupportRods()
 
 def CullDeadEntitiesFromList(entities):
     return [entities[i] for i in range(len(entities)) if not entities[i].destroyed]
@@ -22,7 +22,7 @@ def GeneratePolygonVertices():
     angle = 0
     while angle < 2 * pi:
         length = random.random() * 150 + 100
-        angle = min(angle + random.random() * 0.2 + 0.1, 2*pi)
+        angle = min(angle + random.random() * 0.1 + 0.05, 2*pi)
         point = Point(length, 0)
         point.radians = angle
         vertices.append(point)
@@ -48,8 +48,12 @@ def UpdateGame():
 
     if Screen.KeyReleased(pygame.K_c):
         softbody = Softbody(Screen.Width()/2, Screen.Height()/2, GeneratePolygonVertices())
-        softbody.generateRandomSupportRods(50)
+        softbody.addRandomSupportRods(20)
         softbodies.append(softbody)
+
+    if Screen.KeyReleased(pygame.K_s):
+        for softbody in softbodies:
+            softbody.simplify()
 
     if Screen.KeyDown(pygame.K_j):
         for softbody in softbodies:
@@ -92,12 +96,10 @@ def RenderGame():
     global mouseClickPosition
     if mouseClickPosition is not None:
         Screen.DrawLine(mouseClickPosition, Screen.MousePosition())
-    # points = [Point(322.26804123711355, 217.7319587628865),
-    #     Point(322.26804123711355, 217.7319587628865),
-    #     Point(322.5000000000001, 240.0),
-    #     Point(322.5000000000001, 240.0),
-    #     Point(322.73684210526324, 262.73684210526324),
-    #     Point(322.73684210526324, 262.73684210526324)]
+    # points = [tuple(Point(322.26804123711355, 217.7319587628865)),
+    #     tuple(Point(322.26804123711355, 217.7319587628865)),
+    #     tuple(Point(322.5000000000001, 240.0))]
+    # Screen.DrawLines(points, Color.white, 5)
     # for point in points:
     #     Screen.DrawCircle(point, 5, Color.light_grey)
     # Screen.DrawCircle(Point(321.4583333333334, 140.0), 6, Color.green)
