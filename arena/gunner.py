@@ -55,5 +55,5 @@ class Gunner(Entity):
             softbodies = Entity.GetAllEntitiesOfType("Softbody")
             shotVectors = self.shotVectors(Screen.MousePosition())
             for softbody in softbodies:
-                softbody.splitAndDestroy(shotVectors)
+                softbody.split(shotVectors)
 

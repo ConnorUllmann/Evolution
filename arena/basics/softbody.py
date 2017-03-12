@@ -354,11 +354,6 @@ class Softbody(Entity, Polygon):
             pointsToInsert[str(c[0])+str(d[0])] = rodIntersections
             pointsToInsert[str(d[0])+str(c[0])] = rodIntersectionsReverseCopy
 
-        # for tempKey in pointsToInsert:
-        #     print("[{}]".format(tempKey))
-        #     for vertex in pointsToInsert[tempKey]:
-        #         print(" {}".format(vertex))
-
         polygonsPoints = [[]]
         i = unchecked[0]
         while True:
@@ -366,7 +361,6 @@ class Softbody(Entity, Polygon):
                 unchecked.remove(i)
 
             if len(polygonsPoints[-1]) > 0 and polygonsPoints[-1][0] == points[i]:
-                #print("New polygon!")
                 if len(unchecked) > 0:
                     polygonsPoints.append([])
                     i = unchecked[0]
@@ -376,7 +370,6 @@ class Softbody(Entity, Polygon):
             j = (i+1)%len(points)
 
             polygonsPoints[-1].append(Point.Clone(points[i]))
-            #print("[{}] {}".format(i, points[i]))
 
             for intersectionInfo in intersections:
                 if intersectionInfo[0] == points[i]:
@@ -396,27 +389,21 @@ class Softbody(Entity, Polygon):
             i = j
 
     def splitOnce(self, lineA, lineB):
-        #print(" --- NEW SPLIT --- ")
         polygonsPoints, rodsSupportEnds = self.splitTraverse(lineA, lineB)
         softbodies = []
 
         if polygonsPoints == None:
             return [self]
 
-        #print("Polygons: {}".format(len(polygonsPoints)))
         for polygonPoints in polygonsPoints:
-            #print(polygonPoints)
             softbodies.append(Softbody.NewFromAbsolutePositions(polygonPoints))
-        print("Softbodies: {}".format(len(softbodies)))
+
         for rodEnds in rodsSupportEnds:
             for softbody in softbodies:
                 rodNodeA = None
                 rodNodeB = None
                 for vertex in softbody.vertices:
                     vertPoint = vertex + softbody
-                    #print("rodEnds[0]: " + str(rodEnds[0]))
-                    #print("rodEnds[1]: " + str(rodEnds[1]))
-                    #print("vertPoint: " + str(vertPoint))
                     if rodNodeA is None:
                         if rodEnds[0] == vertPoint:
                             rodNodeA = vertex
@@ -469,19 +456,15 @@ class Softbody(Entity, Polygon):
     def splitAndDestroy(self, linePoints):
         softbodies = self.split(linePoints)
         if len(softbodies) == 1 and softbodies[0] == self:
-            print("Did not destroy self")
             return softbodies
         self.Destroy()
-        print("Destroyed self")
         return softbodies
 
     def split(self, linePoints):
         polygons = [self]
         for pair in linePoints:
             polygonsNew = []
-            print("Polygons splitting... {}".format(len(polygons)))
             for polygon in polygons:
                 polygonsNew.extend(polygon.splitOnceAndDestroy(pair[0], pair[1]))
             polygons = polygonsNew
-        print("Polygons done... {}".format(len(polygons)))
         return polygons
