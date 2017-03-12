@@ -16,10 +16,10 @@ def GeneratePolygonVertices():
 
 def Begin():
     vertices = GeneratePolygonVertices()
-    softbody = Softbody(Screen.Width() / 4, Screen.Height() / 4, vertices)
-    softbody.addRandomSupportRods(20)
+    softbody = Softbody(Screen.Width() / 2, Screen.Height() / 2, vertices)
+    #softbody.addRandomSupportRods(20)
 
-    gunner = Gunner(Screen.Width() / 2, Screen.Height() / 2)
+    gunner = Gunner(Screen.Width() / 4, Screen.Height() / 4)
 
 def Update():
     pass

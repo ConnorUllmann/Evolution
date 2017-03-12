@@ -15,7 +15,7 @@ def GeneratePolygon(x, y):
     angle = 0
     while angle < 2 * pi:
         length = random.random() * 250 + 20
-        angle = min(angle + random.random() * 0.1 + 0.05, 2*pi)
+        angle = min(angle + random.random() * 0.3 + 0.15, 2*pi)
         point = Point(length, 0)
         point.radians = angle
         vertices.append(point)
@@ -26,15 +26,15 @@ polygons = []
 mergePolygons = []
 intersectPolygons = []
 cuttingLines = [
-    [Point(200, 200), Point(300, 300)],
-    [Point(600, 200), Point(500, 500)],
-    [Point(350, 100), Point(350, 200)],
-    [Point(0, 300), Point(100, 300)]
+    # [Point(200, 200), Point(300, 300)],
+    # [Point(600, 200), Point(500, 500)],
+    # [Point(350, 100), Point(350, 200)],
+    # [Point(0, 300), Point(100, 300)]
 ]
 def BeginGame():
     global polygons, debugPoints
 
-    for i in range(1):
+    for i in range(2):
         polygons.append(PolygonEntity(GeneratePolygon(300 + 200 * random.random(), 300 + 200 * random.random()), Color.all[i%len(Color.all)]))
 
 def RotatePolygons(amount, polygons):
@@ -49,7 +49,9 @@ def UpdateGame():
         firstFrameTriggered = True
 
     if Screen.KeyReleased(pygame.K_v):
-        RotatePolygons(0.5, polygons)
+        for polygon in polygons:
+            polygon.visible = not polygon.visible
+        #RotatePolygons(0.5, polygons)
 
     if Screen.KeyDown(pygame.K_b):
         RotatePolygons(0.025, polygons)
@@ -84,6 +86,9 @@ def UpdateGame():
             for polygon in polygons:
                 polygon.visible = False
 
+    if Screen.LeftMouseReleased() or Screen.KeyDown(pygame.K_y):
+        mergePolygons = Polygon.SubtractTwo(True, polygons[1], polygons[0])
+
 
     polygons[0].x = Screen.MousePosition().x
     polygons[0].y = Screen.MousePosition().y
@@ -91,7 +96,7 @@ def UpdateGame():
 def RenderGame():
     global mergePolygons, intersectPolygons, cuttingLines
     for i in range(len(mergePolygons)):
-        mergePolygons[i].renderPolygon(Color.all[i%len(Color.all)], 1)
+        mergePolygons[i].renderPolygon(Color.all[i%len(Color.all)], 3)
     for polygon in intersectPolygons:
         polygon.renderPolygon(Color.yellow, 4)
 

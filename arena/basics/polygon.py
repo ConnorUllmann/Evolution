@@ -51,8 +51,8 @@ class Polygon(Point):
                 verticesTemp.append((self.x + vertex.x, self.y + vertex.y))
             Screen.DrawPolygon(verticesTemp, color, thickness)
             count = len(self)
-            for i in range(count):
-                Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
+            # for i in range(count):
+            #     Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
 
     def renderBoundingRect(self, color=Color.white, thickness=1, filled=True):
         selfMinX = self.minX
@@ -274,9 +274,11 @@ class Polygon(Point):
         polygons = [self]
         for pair in linePoints:
             polygonsNew = []
-            for _polygon in polygons:
-                polygonsNew.extend(_polygon.splitOnce(pair[0], pair[1]))
+            print("Polygons splitting... {}".format(len(polygons)))
+            for polygon in polygons:
+                polygonsNew.extend(polygon.splitOnce(pair[0], pair[1]))
             polygons = polygonsNew
+        print("Polygons done... {}".format(len(polygons)))
         return polygons
 
     def removeVertexAt(self, i):
@@ -409,6 +411,96 @@ class Polygon(Point):
     @staticmethod
     def Intersect(A, B):
         return Polygon.CombineTwo(False, A, B)
+
+    @staticmethod
+    def SubtractTraverseHandoff(A, B, verticesA, verticesB, intersections, startPolygon, i, polygonPoints):
+        polygon = polygonPoints[-1]
+        while True:
+            next = 1 if startPolygon == A else -1
+            a = verticesA[i%len(verticesA)]
+            b = verticesA[(i+len(verticesA)+next)%len(verticesA)]
+
+            if a in intersections:
+                intersections.remove(a)
+
+            if len(polygon) > 0 and a == polygon[0]:
+                if len(intersections) > 0:
+                    if startPolygon == A:
+                        return Polygon.SubtractTraverseHandoff(A, B, verticesA, verticesB, intersections, startPolygon, verticesA.index(intersections[0]), polygonPoints+[[]])
+                    else:
+                        return Polygon.SubtractTraverseHandoff(B, A, verticesB, verticesA, intersections, startPolygon, verticesB.index(intersections[0]), polygonPoints+[[]])
+                return polygonPoints
+
+            if startPolygon == A:
+                if B.contains((a + b)/2):
+                    if a in verticesB:
+                        return Polygon.SubtractTraverseHandoff(B, A, verticesB, verticesA, intersections, startPolygon, verticesB.index(a), polygonPoints)
+                else:
+                    polygon.append(a)
+            else:
+                if not B.contains((a + b)/2):
+                    if a in verticesB:
+                        return Polygon.SubtractTraverseHandoff(B, A, verticesB, verticesA, intersections, startPolygon, verticesB.index(a), polygonPoints)
+                else:
+                    polygon.append(a)
+            i += next
+
+    @staticmethod
+    def SubtractTraverse(merge, A, B):
+        # Returns list of polygon point sets formed by the intersection or the merging of two polygons (depending on the boolean "merge" property)
+
+        #Return case where one of the polygons is empty
+        Aempty = A.empty
+        Bempty = B.empty
+        if Aempty and Bempty:
+            return []
+        elif Aempty:
+            return []
+        elif Bempty:
+            return [A.verticesAbsolute()]
+
+        if not A.boundingRectsCollide(B):
+            return [A.verticesAbsolute()]
+
+        verticesA, incomingIntersectionsA = Polygon.AbsolutePolygonPointPositionsAndIntersections(A, B, False, True)
+        verticesB = Polygon.AbsolutePolygonPointPositionsAndIntersections(B, A, False, False)
+
+        #Return case where the polygons are identical
+        ABsame = True
+        if len(verticesA) == len(verticesB):
+            for vertex in verticesA:
+                if vertex not in verticesB:
+                    ABsame = False
+                    break
+        else:
+            ABsame = False
+        if ABsame:
+            return []
+
+        #Return case where one polygon is inside the other or they do not touch
+        # if len(incomingIntersectionsA) <= 0:
+        #     for vertex in verticesB:
+        #         if vertex not in verticesA and A.contains(vertex):
+        #             return [A.verticesAbsolute()] if merge else [B.verticesAbsolute()]
+        #     for vertex in verticesA:
+        #         if vertex not in verticesB and B.contains(vertex):
+        #             return [B.verticesAbsolute()] if merge else [A.verticesAbsolute()]
+        #     return [A.verticesAbsolute(), B.verticesAbsolute()] if merge else []
+
+        polygonPoints = Polygon.SubtractTraverseHandoff(A, B, verticesA, verticesB, incomingIntersectionsA, A, verticesA.index(incomingIntersectionsA[0]), [[]])
+
+        #If we started a polygon but didn't finish it, chop it off
+        if len(polygonPoints) > 0 and len(polygonPoints[-1]) <= 0:
+            polygonPoints = polygonPoints[:-1]
+        return polygonPoints
+
+    @staticmethod
+    def SubtractTwo(merge, A, B):
+        polygonsPoints = Polygon.SubtractTraverse(merge, A, B)
+        polygons = []
+        for polygonPoints in polygonsPoints:
+            polygons.append(Polygon.NewFromAbsolutePositions(polygonPoints))
+        return polygons
 
 
 class PolygonEntity(Polygon, Entity):

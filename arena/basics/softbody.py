@@ -3,8 +3,9 @@ from .point import Point
 from .screen import Screen
 from .color import Color
 from .entity import Entity
-from .utils import PointOnLineAtX, PointOnLineAtY, LinesIntersectionPoint, PointOnLineClosestToPoint, RectanglesCollide
+from .utils import PointOnLineAtX, PointOnLineAtY, LinesIntersectionPoint, PointOnLineClosestToPoint, RectanglesCollide, Sigmoid
 from random import random
+from math import exp
 
 class ViscoElasticNode(Point):
 
@@ -49,12 +50,13 @@ class ViscoElasticNode(Point):
 
 class ViscoElasticRod(Point):
 
-    coeffPull = 100
+    coeffPull = 25
 
-    def __init__(self, nodeA, nodeB, color, spanMin=20):
-        self.color = color
+    def __init__(self, nodeA, nodeB, color, spanMin=5):
         position = (nodeA + nodeB) / 2
         Point.__init__(self, position.x, position.y)
+
+        self.color = color
         self.spanMin = spanMin
 
         nodeA.rods.append(self)
@@ -74,7 +76,14 @@ class ViscoElasticRod(Point):
                 node.rods.remove(self)
 
     def update(self):
-        self.force = ViscoElasticRod.coeffPull * (1 - (self.nodes[0] - self.nodes[1]).length / self.span)
+        v = 1 - (self.nodes[0] - self.nodes[1]).length / self.span
+        #v = 2.0 / (1.0 + exp(-min(max(v, -1), 1)*5)) - 1
+
+        #if abs(v) > 0.9:
+        #    print(v)
+
+        self.force = ViscoElasticRod.coeffPull * v
+
         self.center()
 
     def render(self, offset):
@@ -456,3 +465,23 @@ class Softbody(Entity, Polygon):
             return softbodies
         self.Destroy()
         return softbodies
+
+    def splitAndDestroy(self, linePoints):
+        softbodies = self.split(linePoints)
+        if len(softbodies) == 1 and softbodies[0] == self:
+            print("Did not destroy self")
+            return softbodies
+        self.Destroy()
+        print("Destroyed self")
+        return softbodies
+
+    def split(self, linePoints):
+        polygons = [self]
+        for pair in linePoints:
+            polygonsNew = []
+            print("Polygons splitting... {}".format(len(polygons)))
+            for polygon in polygons:
+                polygonsNew.extend(polygon.splitOnceAndDestroy(pair[0], pair[1]))
+            polygons = polygonsNew
+        print("Polygons done... {}".format(len(polygons)))
+        return polygons

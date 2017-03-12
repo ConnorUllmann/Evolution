@@ -1,4 +1,4 @@
-from basics import Entity, Screen, Color
+from basics import Entity, Screen, Color, Point
 import pygame
 
 class Gunner(Entity):
@@ -19,9 +19,20 @@ class Gunner(Entity):
 
     def Render(self):
         Screen.DrawCircle(self, 10, Color.light_green)
+        shotVectors = self.shotVectors(Screen.MousePosition())
         if self.splitTimer > 0:
             thickness = int((self.splitTimer * 4)**8 / 8)
-            Screen.DrawRay(self, Screen.MousePosition(), Color.red, thickness)
+            for shotVector in shotVectors:
+                Screen.DrawRay(shotVector[0], shotVector[1], Color.red, thickness)
+
+    def shotVectors(self, targetPosition, dAngle=5):
+        diff = targetPosition - self
+        angle = diff.degrees
+        ptLeft = Point.Clone(diff)
+        ptRight = Point.Clone(diff)
+        ptLeft.degrees = angle + dAngle
+        ptRight.degrees = angle - dAngle
+        return [[self, self + ptLeft], [self, self + ptRight], [self, Point.Clone(targetPosition)]]
 
     def input(self):
         acc = 1
@@ -42,6 +53,7 @@ class Gunner(Entity):
         if Screen.LeftMousePressed():
             self.splitTimer = self.splitTimerMax
             softbodies = Entity.GetAllEntitiesOfType("Softbody")
+            shotVectors = self.shotVectors(Screen.MousePosition())
             for softbody in softbodies:
-                softbody.splitOnceAndDestroy(self, Screen.MousePosition())
+                softbody.splitAndDestroy(shotVectors)
 
