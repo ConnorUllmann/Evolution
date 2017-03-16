@@ -8,4 +8,5 @@ from .point import Point
 from .polygon import Polygon, PolygonEntity
 from .softbody import Softbody
 from .color import Color
+from .quadtree import QuadTree
 from .utils import *
