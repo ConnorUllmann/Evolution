@@ -77,4 +77,5 @@ class Entity(StateMachine, Point):
 
     @position.setter
     def position(self, point):
-        self = point
+        self.x = point.x
+        self.y = point.y

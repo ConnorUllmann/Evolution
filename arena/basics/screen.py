@@ -1,5 +1,4 @@
 import pygame, time, os, platform
-from tkinter import *
 from random import randint, random
 from .thread_manager import ThreadManager
 from .point import Point

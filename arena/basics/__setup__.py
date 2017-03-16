@@ -8,4 +8,4 @@ setup(name='basics',
       author='Connor Ullmann',
       author_email='cogrul@umich.edu',
       packages=['basics'],
-      requires=['random', 'json', 'numpy', 'datetime', 'sys', 'pygame', 'time', 'os', 'platform', 'tkinter', 'threading', 'math'])
+      requires=['random', 'json', 'numpy', 'datetime', 'sys', 'pygame', 'time', 'os', 'platform', 'threading', 'math'])
