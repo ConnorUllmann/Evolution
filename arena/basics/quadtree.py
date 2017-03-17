@@ -6,21 +6,45 @@ from .utils import RectanglesCollide
 
 class QuadTree(Point):
 
-    def __init__(self, x, y, width, height, minCellWidth=40, minCellHeight=40):
+    #Weird problem when minCellWidth and minCellHeight are set to 10 or 20; error message
+    # "C:/Users/Connor/Desktop/Development/Python/Evolution/arena/main_quadtree.py", line 79, in < module >
+    # Screen.StartGame(Begin, Update, Render)
+    # "C:\Users\Connor\Desktop\Development\Python\Evolution\arena\basics\screen.py", line 100, in StartGame
+    # Screen.Start()
+    # "C:\Users\Connor\Desktop\Development\Python\Evolution\arena\basics\screen.py", line 80, in Start
+    # Screen.Instance.StartHelper()
+    # "C:\Users\Connor\Desktop\Development\Python\Evolution\arena\basics\screen.py", line 86, in StartHelper
+    # self.Update()
+    # "C:\Users\Connor\Desktop\Development\Python\Evolution\arena\basics\screen.py", line 170, in Update
+    # updateFunction()
+    # "C:/Users/Connor/Desktop/Development/Python/Evolution/arena/main_quadtree.py", line 42, in Update
+    # objects.remove(rect)
+    # ValueError: list.remove(x): x not in list
+    def __init__(self, x, y, width, height, minCellWidth=20, minCellHeight=20):
         Point.__init__(self, x, y)
-        self.maxObjectsPerCell = 2
+        self.maxObjectsPerCell = 5
         self.minCellWidth = minCellWidth
         self.minCellHeight = minCellHeight
+        self.nodesByObject = {}
         self.root = QuadTreeNode(0, 0, width, height, self)
+
+    def getAllObjectsInTree(self):
+        return list(x[0] for x in self.root.objectData)
+
+    def getNodesCollidingObject(self, obj):
+        objStr = str(obj)
+        if objStr not in self.nodesByObject:
+            return []
+        return self.nodesByObject[objStr]
+
+    def getLeafNodesCollidingObject(self, obj):
+        return list(filter(lambda x: not x.hasSplit, self.getNodesCollidingObject(obj)))
 
     def insertObjectAtPoint(self, obj, x, y):
         self.root.insertObjectWithBoundingBox(obj, x, y, 0, 0)
 
     def insertObjectWithBoundingBox(self, obj, x, y, width, height):
         self.root.insertObjectWithBoundingBox(obj, x, y, width, height)
-
-    def collidingLeafNodes(self, obj):
-        return self.root.findCollidingLeafNodes(obj)
 
     def collidingObjects(self, x, y, width, height):
         return self.root.findCollidingObjects(x, y, width, height)
@@ -72,6 +96,12 @@ class QuadTreeNode(Point):
     def insertObjectWithBoundingBox(self, obj, x, y, width, height):
         if obj not in self.objectData and self.collideRect(x, y, width, height):
             self.objectData.append((obj, x, y, width, height))
+
+            objStr = str(obj)
+            if objStr not in self.quadTree.nodesByObject:
+                self.quadTree.nodesByObject[objStr] = []
+            self.quadTree.nodesByObject[objStr].append(self)
+
             if self.hasSplit:
                 for child in self.childTrees:
                     child.insertObjectWithBoundingBox(obj, x, y, width, height)
@@ -83,7 +113,8 @@ class QuadTreeNode(Point):
 
     def findCollidingObjects(self, x, y, width, height):
         collidingObjects = []
-        potentialCollidingObjectDatas = self.findPotentialCollidingObjects(x, y, width, height)
+        potentialCollidingObjectDatas = []
+        self.findPotentialCollidingObjects(x, y, width, height, potentialCollidingObjectDatas)
         for pcod in potentialCollidingObjectDatas:
             if RectanglesCollide(x, y, width, height, pcod[1], pcod[2], pcod[3], pcod[4]):
                 collidingObjects.append(pcod[0])
@@ -96,28 +127,13 @@ class QuadTreeNode(Point):
                     child.findPotentialCollidingObjects(x, y, width, height, objectDatas)
             else:
                 for objectData in self.objectData:
-                    objectDatas.append(objectData)
-        return objectDatas
-
-    def findCollidingLeafNodes(self, objInTree, leafNodes=[]):
-        for child in self.childTrees:
-            for objectData in child.objectData:
-                if objectData[0] != objInTree:
-                    continue
-                if child.hasSplit:
-                    child.findCollidingLeafNodes(objInTree, leafNodes)
-                else:
-                    leafNodes.append(child)
-                break
-        return leafNodes
-
-    def findPotentialCollidingObjectsWithObjectInTree(self, objInTree):
-        nodes = self.findCollidingLeafNodes(objInTree)
-        objects = []
-        for node in nodes:
-            for objectData in node.objectData:
-                objects.append(objectData[0])
-        return objects
+                    alreadyContainsObjectData = False
+                    for tempObjectData in objectDatas:
+                        if objectData[0] == tempObjectData[0]:
+                            alreadyContainsObjectData = True
+                            break
+                    if not alreadyContainsObjectData:
+                        objectDatas.append(objectData)
 
     def render(self):
         Screen.DrawRect(self, Point(self.width, self.height), self.color, filled=False)

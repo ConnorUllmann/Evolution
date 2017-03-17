@@ -149,6 +149,9 @@ class Point:
     def __str__(self):
         return "({}, {})".format(self.x, self.y)
 
+    def __repr__(self):
+        return str(self)
+
     def __lt__(self, other):
         return self.lengthSq < other.lengthSq
 
