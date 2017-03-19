@@ -6,39 +6,15 @@ from .utils import RectanglesCollide
 
 class QuadTree(Point):
 
-    #Weird problem when minCellWidth and minCellHeight are set to 10 or 20; error message
-    # "C:/Users/Connor/Desktop/Development/Python/Evolution/arena/main_quadtree.py", line 79, in < module >
-    # Screen.StartGame(Begin, Update, Render)
-    # "C:\Users\Connor\Desktop\Development\Python\Evolution\arena\basics\screen.py", line 100, in StartGame
-    # Screen.Start()
-    # "C:\Users\Connor\Desktop\Development\Python\Evolution\arena\basics\screen.py", line 80, in Start
-    # Screen.Instance.StartHelper()
-    # "C:\Users\Connor\Desktop\Development\Python\Evolution\arena\basics\screen.py", line 86, in StartHelper
-    # self.Update()
-    # "C:\Users\Connor\Desktop\Development\Python\Evolution\arena\basics\screen.py", line 170, in Update
-    # updateFunction()
-    # "C:/Users/Connor/Desktop/Development/Python/Evolution/arena/main_quadtree.py", line 42, in Update
-    # objects.remove(rect)
-    # ValueError: list.remove(x): x not in list
     def __init__(self, x, y, width, height, minCellWidth=20, minCellHeight=20):
         Point.__init__(self, x, y)
         self.maxObjectsPerCell = 5
         self.minCellWidth = minCellWidth
         self.minCellHeight = minCellHeight
-        self.nodesByObject = {}
         self.root = QuadTreeNode(0, 0, width, height, self)
 
     def getAllObjectsInTree(self):
         return list(x[0] for x in self.root.objectData)
-
-    def getNodesCollidingObject(self, obj):
-        objStr = str(obj)
-        if objStr not in self.nodesByObject:
-            return []
-        return self.nodesByObject[objStr]
-
-    def getLeafNodesCollidingObject(self, obj):
-        return list(filter(lambda x: not x.hasSplit, self.getNodesCollidingObject(obj)))
 
     def insertObjectAtPoint(self, obj, x, y):
         self.root.insertObjectWithBoundingBox(obj, x, y, 0, 0)
@@ -49,11 +25,22 @@ class QuadTree(Point):
     def collidingObjects(self, x, y, width, height):
         return self.root.findCollidingObjects(x, y, width, height)
 
+    def collidingLeafNodes(self, x, y, width, height):
+        leafNodes = []
+        self.root.findCollidingLeafNodes(x, y, width, height, leafNodes)
+        return leafNodes
+
+    def findNodeByPositionAndSize(self, x, y, width, height):
+        return self.root.findNodeByPositionAndSize(x, y, width, height)
+
     def render(self):
         self.root.render()
 
 
 class QuadTreeNode(Point):
+
+    def __str__(self):
+        return "(x={}, y={}, w={}, h={}, objs={})".format(self.x, self.y, self.width, self.height, len(self.objectData))
 
     def __init__(self, x, y, width, height, quadTree):
         Point.__init__(self, x, y)
@@ -65,8 +52,8 @@ class QuadTreeNode(Point):
         self.color = Color.green
 
     def split(self):
-        halfWidth = self.width / 2
-        halfHeight = self.width / 2
+        halfWidth = self.width / 2.0
+        halfHeight = self.height / 2.0
         points = [
             Point(self.x, self.y),
             Point(self.x + halfWidth, self.y),
@@ -96,11 +83,6 @@ class QuadTreeNode(Point):
     def insertObjectWithBoundingBox(self, obj, x, y, width, height):
         if obj not in self.objectData and self.collideRect(x, y, width, height):
             self.objectData.append((obj, x, y, width, height))
-
-            objStr = str(obj)
-            if objStr not in self.quadTree.nodesByObject:
-                self.quadTree.nodesByObject[objStr] = []
-            self.quadTree.nodesByObject[objStr].append(self)
 
             if self.hasSplit:
                 for child in self.childTrees:
@@ -135,8 +117,26 @@ class QuadTreeNode(Point):
                     if not alreadyContainsObjectData:
                         objectDatas.append(objectData)
 
+    def findCollidingLeafNodes(self, x, y, width, height, leafNodes=[]):
+        if self.collideRect(x, y, width, height):
+            if self.hasSplit:
+                for child in self.childTrees:
+                    child.findCollidingLeafNodes(x, y, width, height, leafNodes)
+            else:
+                leafNodes.append(self)
+
+    def findNodeByPositionAndSize(self, x, y, width, height):
+        if self.x == x and self.y == y and self.width == width and self.height == height:
+            return self
+        if self.hasSplit:
+            for child in self.childTrees:
+                result = child.findNodeByPositionAndSize(x, y, width, height)
+                if result is not None:
+                    return result
+        return None
+
     def render(self):
         Screen.DrawRect(self, Point(self.width, self.height), self.color, filled=False)
-        Screen.DrawText(self + Point(self.width/2, self.height/2), "{}".format(len(self.objectData)))
+        #Screen.DrawText(self + Point(self.width/2, self.height/2), "{}".format(len(self.objectData)))
         for child in self.childTrees:
             child.render()
