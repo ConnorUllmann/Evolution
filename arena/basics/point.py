@@ -127,6 +127,12 @@ class Point:
     def __rmul__(self, other):
         return self * other
 
+    def __div__(self, other):
+        if isinstance(other, self.__class__):
+            return Point(self.x / other[0], self.y / other[1])
+        else:
+            return Point(self.x / other, self.y / other)
+
     def __truediv__(self, other):
         if isinstance(other, self.__class__):
             return Point(self.x / other[0], self.y / other[1])

@@ -114,17 +114,18 @@ class Polygon(Point):
         return self.collideWithRectangle(0, 0, Screen.Width(), Screen.Height())
 
     def collideWithRectangle(self, ax, ay, aw, ah):
+        rect = Polygon(ax, ay, [Point(0, 0), Point(0, ah), Point(aw, ah), Point(aw, 0)])
+        return self.collide(rect)
+
+    def boundingRectCollideWithRectangle(self, ax, ay, aw, ah):
         selfMinX = self.minX
         selfMinY = self.minY
         return RectanglesCollide(selfMinX, selfMinY, self.maxX - selfMinX, self.maxY - selfMinY, ax, ay, aw, ah)
 
     def boundingRectsCollide(self, other):
-        selfMinX = self.minX
-        selfMinY = self.minY
         otherMinX = other.minX
         otherMinY = other.minY
-        return RectanglesCollide(selfMinX, selfMinY, self.maxX - selfMinX, self.maxY - selfMinY,
-                                 otherMinX, otherMinY, other.maxX - otherMinX, other.maxY - otherMinY)
+        return self.boundingRectCollideWithRectangle(otherMinX, otherMinY, other.maxX - otherMinX, other.maxY - otherMinY)
 
     def scale(self, multiplier, center=None):
         if center is None:
@@ -283,6 +284,41 @@ class Polygon(Point):
 
     def removeVertexAt(self, i):
         return self.vertices.pop(i)
+
+    def collide(self, other):
+        return Polygon.Collide(self, other)
+
+    @staticmethod
+    def Collide(A, B):
+        #Return case where one of the polygons is empty
+        if A.empty or B.empty:
+            return False
+
+        #Bounding boxes don't overlap
+        if not A.boundingRectsCollide(B):
+            return False
+
+        #Return case where they intersect
+        lenA = len(A.vertices)
+        lenB = len(B.vertices)
+        for i in range(lenA):
+            a = A + A.vertices[i]
+            b = A + A.vertices[(i + 1) % lenA]
+            for j in range(lenB):
+                c = B + B.vertices[j]
+                d = B + B.vertices[(j + 1) % lenB]
+                if LinesIntersectionPoint(a, b, c, d, True) is not None:
+                    return True
+
+        #Return case where one is inside the other
+        if A.contains(B + B.vertices[0]):
+            return True
+        if B.contains(A + A.vertices[0]):
+            return True
+
+        #Return case where bounding boxes collide,
+        #but they never intersect and are outside one another
+        return False
 
     @staticmethod
     def AbsolutePolygonPointPositionsAndIntersections(A, B, merge, withIncomingIntersections):

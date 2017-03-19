@@ -8,7 +8,7 @@ class QuadTree(Point):
 
     def __init__(self, x, y, width, height, minCellWidth=20, minCellHeight=20):
         Point.__init__(self, x, y)
-        self.maxObjectsPerCell = 5
+        self.maxObjectsPerCell = 2
         self.minCellWidth = minCellWidth
         self.minCellHeight = minCellHeight
         self.root = QuadTreeNode(0, 0, width, height, self)
@@ -81,7 +81,11 @@ class QuadTreeNode(Point):
         return RectanglesCollide(self.x, self.y, self.width, self.height, x, y, width, height)
 
     def insertObjectWithBoundingBox(self, obj, x, y, width, height):
-        if obj not in self.objectData and self.collideRect(x, y, width, height):
+        for objectData in self.objectData:
+            if objectData[0] == obj:
+                return
+
+        if self.collideRect(x, y, width, height):
             self.objectData.append((obj, x, y, width, height))
 
             if self.hasSplit:
