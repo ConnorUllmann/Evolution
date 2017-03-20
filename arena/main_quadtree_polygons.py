@@ -1,7 +1,9 @@
 from basics import Screen, Point, Color, QuadTree, Polygon, PolygonEntity
-from random import random
+from random import random, seed
 from math import pi
 from time import time
+
+seed(15)
 
 polygons = []
 quadtree = None
@@ -10,8 +12,8 @@ def GeneratePolygon(x, y):
     vertices = []
     angle = 0.0
     while angle < 2 * pi:
-        length = random() * 4 + 1
-        angle = min(angle + random() * 0.2 + 0.1, 2*pi)
+        length = random() * 2 + 2
+        angle = min(angle + random() * 0.6 + 0.3, 2*pi)
         point = Point(length, 0)
         point.radians = angle
         vertices.append(point)
@@ -19,18 +21,20 @@ def GeneratePolygon(x, y):
 
 def Begin():
     global quadtree, polygons
-    for i in range(1000):
+    for i in range(500):
         polygon = PolygonEntity(GeneratePolygon(random() * Screen.Width(), random() * Screen.Height()), Color.light_blue)
         polygons.append(polygon)
 
 def Update():
     global quadtree, polygons
 
+    startTime = time()
     quadtree = QuadTree(0, 0, Screen.Width(), Screen.Height())
     for polygon in polygons:
         minX = polygon.minX
         minY = polygon.minY
         quadtree.insertObjectWithBoundingBox(polygon, minX, minY, polygon.maxX - minX, polygon.maxY - minY)
+    print("Insertion time:   {}s".format(time() - startTime))
 
     startTime = time()
     for polygon in polygons:
@@ -43,14 +47,14 @@ def Update():
             polygon.color = Color.red
     print("Quad tree time:   {}s".format(time() - startTime))
 
-    startTime = time()
-    for polygonA in polygons:
-        for polygonB in polygons:
-            if polygonA == polygonB:
-                continue
-            if polygonA.collide(polygonB):
-                polygonA.color = polygonB.color = Color.red
-    print("Brute force time: {}".format(time() - startTime))
+    # startTime = time()
+    # for polygonA in polygons:
+    #     for polygonB in polygons:
+    #         if polygonA == polygonB:
+    #             continue
+    #         if polygonA.collide(polygonB):
+    #             polygonA.color = polygonB.color = Color.red
+    # print("Brute force time: {}".format(time() - startTime))
 
 def Render():
     global quadtree, polygons

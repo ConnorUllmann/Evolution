@@ -14,12 +14,18 @@ class QuadTree(Point):
         self.root = QuadTreeNode(0, 0, width, height, self)
 
     def getAllObjectsInTree(self):
-        return list(x[0] for x in self.root.objectData)
+        return list(self.root.objectData[key][0] for key in self.root.objectData)
 
     def insertObjectAtPoint(self, obj, x, y):
+        strObj = str(obj)
+        if strObj in self.root.objectData:
+            return
         self.root.insertObjectWithBoundingBox(obj, x, y, 0, 0)
 
     def insertObjectWithBoundingBox(self, obj, x, y, width, height):
+        strObj = str(obj)
+        if strObj in self.root.objectData:
+            return
         self.root.insertObjectWithBoundingBox(obj, x, y, width, height)
 
     def collidingObjects(self, x, y, width, height):
@@ -48,7 +54,7 @@ class QuadTreeNode(Point):
         self.height = height
         self.quadTree = quadTree
         self.childTrees = []
-        self.objectData = []
+        self.objectData = {}
         self.color = Color.green
 
     def split(self):
@@ -81,47 +87,40 @@ class QuadTreeNode(Point):
         return RectanglesCollide(self.x, self.y, self.width, self.height, x, y, width, height)
 
     def insertObjectWithBoundingBox(self, obj, x, y, width, height):
-        for objectData in self.objectData:
-            if objectData[0] == obj:
-                return
-
         if self.collideRect(x, y, width, height):
-            self.objectData.append((obj, x, y, width, height))
+            self.objectData[str(obj)] = (obj, x, y, width, height)
 
             if self.hasSplit:
                 for child in self.childTrees:
                     child.insertObjectWithBoundingBox(obj, x, y, width, height)
             elif self.shouldSplit and self.canSplit:
                 self.split()
-                for objectData in self.objectData:
+                for key in self.objectData:
+                    objToInsert = self.objectData[key]
                     for child in self.childTrees:
-                        child.insertObjectWithBoundingBox(*objectData)
+                        child.insertObjectWithBoundingBox(*objToInsert)
 
     def findCollidingObjects(self, x, y, width, height):
         collidingObjects = []
-        potentialCollidingObjectDatas = []
+        potentialCollidingObjectDatas = {}
         self.findPotentialCollidingObjects(x, y, width, height, potentialCollidingObjectDatas)
-        for pcod in potentialCollidingObjectDatas:
+        for key in potentialCollidingObjectDatas:
+            pcod = potentialCollidingObjectDatas[key]
             if RectanglesCollide(x, y, width, height, pcod[1], pcod[2], pcod[3], pcod[4]):
                 collidingObjects.append(pcod[0])
         return collidingObjects
 
-    def findPotentialCollidingObjects(self, x, y, width, height, objectDatas=[]):
+    def findPotentialCollidingObjects(self, x, y, width, height, objectDatas):
         if self.collideRect(x, y, width, height):
             if self.hasSplit:
                 for child in self.childTrees:
                     child.findPotentialCollidingObjects(x, y, width, height, objectDatas)
             else:
-                for objectData in self.objectData:
-                    alreadyContainsObjectData = False
-                    for tempObjectData in objectDatas:
-                        if objectData[0] == tempObjectData[0]:
-                            alreadyContainsObjectData = True
-                            break
-                    if not alreadyContainsObjectData:
-                        objectDatas.append(objectData)
+                for key in self.objectData:
+                    if key not in objectDatas:
+                        objectDatas[key] = self.objectData[key]
 
-    def findCollidingLeafNodes(self, x, y, width, height, leafNodes=[]):
+    def findCollidingLeafNodes(self, x, y, width, height, leafNodes):
         if self.collideRect(x, y, width, height):
             if self.hasSplit:
                 for child in self.childTrees:

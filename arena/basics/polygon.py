@@ -550,7 +550,9 @@ class PolygonEntity(Polygon, Entity):
         self.visible = True
 
     def __str__(self):
-        return Entity.__str__(self) + Polygon.__str__(self)
+        #Not including the Polygon string because it is expensive to calculate and we only
+        #need this string to uniquely identify this polygon among all entities
+        return Entity.__str__(self)# + Polygon.__str__(self)
 
     def Render(self):
         if self.visible:
