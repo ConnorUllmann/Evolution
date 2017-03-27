@@ -52,7 +52,7 @@ class Polygon(Point):
             Screen.DrawPolygon(verticesTemp, color, thickness)
             count = len(self)
             for i in range(count):
-                Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
+               Screen.DrawCircle(self + self.vertices[i], 2+3 * (i/(count-1)), color)
 
     def renderBoundingRect(self, color=Color.white, thickness=1, filled=True):
         selfMinX = self.minX

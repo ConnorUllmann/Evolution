@@ -202,6 +202,9 @@ class Point:
         elif index == 1:
             self.y = value
 
+    def insideRectangle(self, x, y, width, height):
+        return self.x >= x and self.y >= y and self.x <= x + width and self.y <= y + height
+
 ##class _Animal():
 ##
 ##    def __init__(self, name):

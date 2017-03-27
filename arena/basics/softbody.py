@@ -162,8 +162,8 @@ class Softbody(Entity, Polygon):
             rod.render(self)
         for rod in self.rodsSupport:
             rod.render(self)
-        for node in self.vertices:
-            node.render(self)
+        # for node in self.vertices:
+        #     node.render(self)
 
     def scale(self, multiplier, center=None):
         Polygon.scale(self, multiplier, center)
@@ -468,3 +468,18 @@ class Softbody(Entity, Polygon):
                 polygonsNew.extend(polygon.splitOnceAndDestroy(pair[0], pair[1]))
             polygons = polygonsNew
         return polygons
+
+    @staticmethod
+    def Subtract(A, *polygons):
+        polygonsReturn = [A]
+        for polygon in polygons:
+            polygonsReturnTemp = []
+            for Asubpolygon in polygonsReturn:
+                polygonsReturnTemp.extend(Polygon.SubtractTwo(Asubpolygon, polygon))
+            polygonsReturn = polygonsReturnTemp
+
+        softbodies = []
+        for polygon in polygonsReturn:
+            softbody = Softbody.NewFromPolygon(polygon)
+        A.Destroy()
+        return softbodies
