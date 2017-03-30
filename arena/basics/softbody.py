@@ -9,7 +9,7 @@ from math import exp
 
 class ViscoElasticNode(Point):
 
-    dampener = 0.9
+    dampener = 0.4
     maxMomentum = 100
 
     def __init__(self, x, y):
@@ -21,8 +21,6 @@ class ViscoElasticNode(Point):
     def update(self):
         self.contract()
 
-        #self.momentum.y += ViscoElasticNode.gravity * self.mass
-
         self.momentum *= ViscoElasticNode.dampener
 
         if self.momentum.length > ViscoElasticNode.maxMomentum:
@@ -30,15 +28,6 @@ class ViscoElasticNode(Point):
 
         self.x += self.momentum.x / self.mass
         self.y += self.momentum.y / self.mass
-
-        # if self.x < 0:
-        #     self.momentum.x = abs(self.momentum.x)
-        # if self.x > Screen.Width():
-        #     self.momentum.x = -abs(self.momentum.x)
-        # if self.y < 0:
-        #     self.momentum.y = abs(self.momentum.y)
-        # if self.y > Screen.Height():
-        #     self.momentum.y = -abs(self.momentum.y)
 
     def render(self, offset):
         Screen.DrawCircle(self + offset, 2, Color.yellow)
@@ -50,7 +39,7 @@ class ViscoElasticNode(Point):
 
 class ViscoElasticRod(Point):
 
-    coeffPull = 25
+    coeffPull = 100
 
     def __init__(self, nodeA, nodeB, color, spanMin=5):
         position = (nodeA + nodeB) / 2
@@ -101,8 +90,8 @@ class ViscoElasticRod(Point):
 
 class Softbody(Entity, Polygon):
 
-    friction = 0.95
-    gravity = 1
+    friction = 0.99
+    gravity = 0.1
 
     @staticmethod
     def NewFromPolygon(polygon):
@@ -137,11 +126,11 @@ class Softbody(Entity, Polygon):
 
     def Update(self):
 
-        if not self.insideScreen():
-            self.Destroy()
-            return
+        # if not self.insideScreen():
+        #     self.Destroy()
+        #     return
 
-        #self.v.y += Softbody.gravity
+        self.v.y += Softbody.gravity
 
         self.x += self.v.x
         self.y += self.v.y
@@ -155,7 +144,7 @@ class Softbody(Entity, Polygon):
         for node in self.vertices:
             node.update()
         # self.moveNodesAroundMouse()
-        # self.putVerticesInsideScreen()
+        self.putVerticesInsideScreen()
 
     def Render(self):
         for rod in self.rods:
@@ -485,3 +474,39 @@ class Softbody(Entity, Polygon):
             polygons = polygonsNew
         print("Polygons done... {}".format(len(polygons)))
         return polygons
+
+    def merge(self, other):
+        polygonsFromMerge = Polygon.merge(self, other)
+        softbodies = []
+        for polygonMerge in polygonsFromMerge:
+            softbody = Softbody.NewFromPolygon(polygonMerge)
+            vertices = softbody.verticesAbsolute()
+            pairs = []
+            for rod in self.rods:
+                pairs.append((self + rod.nodes[0], self + rod.nodes[1]))
+            for rod in other.rods:
+                pairs.append((other + rod.nodes[0], other + rod.nodes[1]))
+            for pair in pairs:
+                try:
+                    indexA = vertices.index(pair[0])
+                    indexB = vertices.index(pair[1])
+                except ValueError:
+                    continue
+                softbody.addRod(softbody.vertices[indexA], softbody.vertices[indexB])
+            pairs = []
+            for rod in self.rodsSupport:
+                pairs.append((self + rod.nodes[0], self + rod.nodes[1]))
+            for rod in other.rodsSupport:
+                pairs.append((other + rod.nodes[0], other + rod.nodes[1]))
+            for pair in pairs:
+                try:
+                    indexA = vertices.index(pair[0])
+                    indexB = vertices.index(pair[1])
+                except ValueError:
+                    continue
+                softbody.addSupportRod(softbody.vertices[indexA], softbody.vertices[indexB])
+            selfPerimeter = self.perimeter()
+            otherPerimeter = other.perimeter()
+            softbody.v = self.v + other.v #(self.v * selfPerimeter + other.v * otherPerimeter) / (selfPerimeter + otherPerimeter)
+            softbodies.append(softbody)
+        return softbodies

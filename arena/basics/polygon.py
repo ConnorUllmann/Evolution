@@ -444,9 +444,15 @@ class Polygon(Point):
     def Merge(A, B):
         return Polygon.CombineTwo(True, A, B)
 
+    def merge(self, other):
+        return Polygon.Merge(self, other)
+
     @staticmethod
     def Intersect(A, B):
         return Polygon.CombineTwo(False, A, B)
+
+    def intersect(self, other):
+        return Polygon.Intersect(self, other)
 
     @staticmethod
     def SubtractTraverseHandoff(A, B, verticesA, verticesB, intersections, startPolygon, i, polygonPoints):
@@ -482,7 +488,7 @@ class Polygon(Point):
             i += next
 
     @staticmethod
-    def SubtractTraverse(merge, A, B):
+    def SubtractTraverse(A, B):
         # Returns list of polygon point sets formed by the intersection or the merging of two polygons (depending on the boolean "merge" property)
 
         #Return case where one of the polygons is empty
@@ -531,12 +537,15 @@ class Polygon(Point):
         return polygonPoints
 
     @staticmethod
-    def SubtractTwo(merge, A, B):
-        polygonsPoints = Polygon.SubtractTraverse(merge, A, B)
+    def Subtract(A, B):
+        polygonsPoints = Polygon.SubtractTraverse(A, B)
         polygons = []
         for polygonPoints in polygonsPoints:
             polygons.append(Polygon.NewFromAbsolutePositions(polygonPoints))
         return polygons
+
+    def subtract(self, other):
+        return Polygon.Subtract(self, other)
 
 
 class PolygonEntity(Polygon, Entity):

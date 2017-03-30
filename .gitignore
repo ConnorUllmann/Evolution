@@ -1,3 +1,4 @@
 *.pyc
 
 arena/.idea/*
+arena/main_random_tests.py
