@@ -1,4 +1,4 @@
-from basics import Entity, Screen, Color, Point
+from basics import Entity, Screen, Color, Point, Polygon, Softbody
 import pygame
 
 class Gunner(Entity):
@@ -10,6 +10,8 @@ class Gunner(Entity):
         self.splitTimer = 0
         self.splitTimerMax = 0.5
 
+        self.radius = 10
+
     def Update(self):
         self.input()
         self.x += self.v.x
@@ -18,7 +20,7 @@ class Gunner(Entity):
         self.splitTimer = max(self.splitTimer - Screen.DeltaTime(), 0)
 
     def Render(self):
-        Screen.DrawCircle(self, 10, Color.light_green)
+        Screen.DrawCircle(self, self.radius, Color.light_green)
         shotVectors = self.shotVectors(Screen.MousePosition())
         if self.splitTimer > 0:
             thickness = int((self.splitTimer * 4)**8 / 8)
@@ -55,5 +57,22 @@ class Gunner(Entity):
             softbodies = Entity.GetAllEntitiesOfType("Softbody")
             shotVectors = self.shotVectors(Screen.MousePosition())
             for softbody in softbodies:
-                softbody.splitAndDestroy(shotVectors)
+                softbody.split(shotVectors)
+
+        if Screen.RightMouseReleased():
+            diff = Screen.MousePosition() - self
+            angle = diff.degrees
+            ptLeft = Point(0, self.radius)
+            ptRight = Point(0, -self.radius)
+            ptLeft.degrees = angle
+            ptRight.degrees = angle
+            vertices = [
+                self + ptRight,
+                self + ptLeft,
+                self + diff.normalized * self.radius * 3
+            ]
+            polygon = Polygon.NewFromAbsolutePositions(vertices)
+            softbodies = Entity.GetAllEntitiesOfType("Softbody")
+            for softbody in softbodies:
+                Softbody.Subtract(softbody, polygon)
 
