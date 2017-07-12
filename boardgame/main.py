@@ -6,9 +6,7 @@ def Begin():
     height = 400
     cellWidth = 40
     cellHeight= 40
-    grid = PlayGrid(width, height, cellWidth, cellHeight)
-    grid.x = 100
-    grid.y = 100
+    grid = PlayGrid(100, 100, width, height, cellWidth, cellHeight)
 
 def Update():
     pass
