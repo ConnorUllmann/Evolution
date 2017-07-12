@@ -6,6 +6,10 @@ class Color:
     def random():
         return (randint(0, 255), randint(0, 255), randint(0, 255))
 
+    @staticmethod
+    def invert(color):
+        return (255 - color[0], 255 - color[1], 255 - color[2])
+
     red = (255, 0, 0)
     green = (0, 255, 0)
     blue = (0, 0, 255)

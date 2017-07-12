@@ -307,7 +307,7 @@ class Screen:
                 self.keysReleased[event.key] = 1
 
     def updateMouseButtonStates(self):
-        mouseButtonsDownPrevious = self.mouseButtonsDown[:] if len(self.mouseButtonsDown) > 0 else [0]*3
+        mouseButtonsDownPrevious = list(self.mouseButtonsDown) if len(self.mouseButtonsDown) > 0 else [0]*3
         self.mouseButtonsDown = pygame.mouse.get_pressed()
         self.leftMouseDown = self.mouseButtonsDown[0]
         self.rightMouseDown = self.mouseButtonsDown[2]
@@ -388,8 +388,20 @@ class Screen:
         Screen.Instance.screen.set_at(intPosition, color)
 
     @staticmethod
-    def DrawText(position=(0, 0), text="", color=(255, 255, 255), fontSize=12):
-        intPosition = (int(position[0] - Screen.Instance.camera.x), int(position[1] - Screen.Instance.camera.y))
+    def DrawText(position=(0, 0), text="", color=(255, 255, 255), fontSize=12, halign="left", valign="top"):
+        x = position[0] - Screen.Instance.camera.x
+        y = position[1] - Screen.Instance.camera.y
         font = pygame.font.Font(None, fontSize)
+
+        width, height = font.size(text)
+        if halign == "center" or halign == "middle":
+            x -= width / 2
+        if halign == "right":
+            x -= width
+        if valign == "center" or valign == "middle":
+            y -= height / 2
+        if valign == "bottom":
+            y -= height
+
         textRendered = font.render(text, 1, color)
-        Screen.Instance.screen.blit(textRendered, intPosition)
+        Screen.Instance.screen.blit(textRendered, (int(x), int(y)))
