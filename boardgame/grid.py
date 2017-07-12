@@ -58,9 +58,8 @@ class Grid:
             return self.values[self.i(x)][self.j(y)]
         return None
 
-class Tile(Entity):
+class Tile:
     def __init__(self, value, grid, i, j):
-        Entity.__init__(self, 0, 0)
         self.value = value
         self.grid = grid
         self.width = self.grid.cellWidth
@@ -84,7 +83,7 @@ class Tile(Entity):
         if self.value == 0:
             return
 
-        position = self
+        position = Point(self.x, self.y)
         dimensions = Point(self.width, self.height)
         dotDimensions = Point(4, 4)
 
@@ -123,13 +122,22 @@ class Tile(Entity):
                 Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, 0),
                                 dotDimensions, dotColor)
             elif self.value == 3:
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, dotDimensions.y * 0.8),
+                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, dotDimensions.y * 0.9),
                                 dotDimensions, dotColor)
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, dotDimensions.y * 0.8),
+                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, dotDimensions.y * 0.9),
                                 dotDimensions, dotColor)
                 Screen.DrawRect(
-                    position + shift + dimensions / 2 - dotDimensions / 3 + Point(0, -dotDimensions.y * 0.8),
+                    position + shift + dimensions / 2 - dotDimensions / 3 + Point(0, -dotDimensions.y * 0.9),
                     dotDimensions, dotColor)
+            elif self.value == 4:
+                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, -dotDimensions.y),
+                                dotDimensions, dotColor)
+                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, -dotDimensions.y),
+                                dotDimensions, dotColor)
+                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, + dotDimensions.y),
+                                dotDimensions, dotColor)
+                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, + dotDimensions.y),
+                                dotDimensions, dotColor)
         # Screen.DrawText(position + dimensions / 2 + Point(0, 2), str(self.value), self.colorText, self.fontSize, "center", "center")
         if showOutline:
             Screen.DrawRect(position + shift + Point(0, dimensions.y - thickness),
@@ -152,16 +160,16 @@ class PlayGrid(Entity, Grid):
         self.fontSize = 32
         self.colorText = Color.white
         self.colorOutline = Color.black
-        self.colorsNormal = [(220, 128, 80), (128, 220, 80), (80, 160, 220), (220, 220, 80)]
-        self.colorsHighlighted = [(255, 220, 180), (220, 255, 180), (180, 230, 255), (255, 255, 180)]
-        self.colorsOutline = [(180, 96, 64), (96, 180, 64), (64, 105, 180), (180, 180, 64)]
+        self.colorsNormal = [(220, 128, 80), (128, 220, 80), (80, 160, 220), (220, 220, 80), (220, 80, 220)]
+        self.colorsHighlighted = [(255, 220, 180), (220, 255, 180), (180, 230, 255), (255, 255, 180), (255, 180, 255)]
+        self.colorsOutline = [(180, 96, 64), (96, 180, 64), (64, 105, 180), (180, 180, 64), (180, 64, 180)]
         self.max = len(self.colorsNormal)
 
         self.imouse = None
         self.jmouse = None
 
-        for i in range(self.columns):
-            for j in range(self.rows):
+        for j in range(self.rows):
+            for i in range(self.columns):
                 self.Set(Tile(random.randint(0, self.max-1), self, i, j), i=i, j=j)
 
     @property
@@ -184,4 +192,7 @@ class PlayGrid(Entity, Grid):
                 tile.UpdateValue()
 
     def Render(self):
+        for j in range(self.rows):
+            for i in range(self.columns):
+                self.Get(i=i, j=j).Render()
         Screen.DrawText(Screen.MousePosition(), str(Screen.DeltaTime()))
