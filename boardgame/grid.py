@@ -150,6 +150,43 @@ class Tile:
         for neighbor in filled:
             neighbor.GlowCount = neighbor.Value
 
+    @staticmethod
+    def GetDotPositions(count, position, dimensions, dotDimensions):
+        dotPositions = []
+        if count == 1:
+            dotPositions.append(position + dimensions / 2 - dotDimensions / 2)
+        elif count == 2:
+            dotPositions.append(position + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, 0))
+            dotPositions.append(position + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, 0))
+        elif count == 3:
+            dotPositions.append(
+                position + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, dotDimensions.y * 0.9))
+            dotPositions.append(
+                position + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, dotDimensions.y * 0.9))
+            dotPositions.append(
+                position + dimensions / 2 - dotDimensions / 3 + Point(0, -dotDimensions.y * 0.9))
+        elif count == 4:
+            dotPositions.append(
+                position + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, -dotDimensions.y))
+            dotPositions.append(
+                position + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, -dotDimensions.y))
+            dotPositions.append(
+                position + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, + dotDimensions.y))
+            dotPositions.append(
+                position + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, + dotDimensions.y))
+        return dotPositions;
+
+    @staticmethod
+    def RenderBasic(value, x, y, grid):
+        position = Point(x, y)
+        dimensions = Point(grid.cellWidth, grid.cellHeight)
+        dotDimensions = Point(4, 4)
+
+        color = grid.colorsNormal[value]
+        Screen.DrawRect(position, dimensions, color)
+
+        for dotPosition in Tile.GetDotPositions(value, position, dimensions, dotDimensions):
+            Screen.DrawRect(dotPosition, dotDimensions, Color.black, filled=True)
 
     def Render(self):
         if Screen.LeftMouseDown():
@@ -208,21 +245,7 @@ class Tile:
         showOutline = highlightedInRange and not highlightedByMouse
         shift = Point(0, -thickness) / 2 if showOutline else Point()
         if drawDots:
-            dotPositions = []
-            if self.DisplayValue == 1:
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 2)
-            elif self.DisplayValue == 2:
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, 0))
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, 0))
-            elif self.DisplayValue == 3:
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, dotDimensions.y * 0.9))
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, dotDimensions.y * 0.9))
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(0, -dotDimensions.y * 0.9))
-            elif self.DisplayValue == 4:
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, -dotDimensions.y))
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, -dotDimensions.y))
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, + dotDimensions.y))
-                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, + dotDimensions.y))
+            dotPositions = Tile.GetDotPositions(self.DisplayValue, position + shift, dimensions, dotDimensions)
             displayDotPositions = []
             speed = 0.2
             while len(self.lastDotPositions) < len(dotPositions):
@@ -297,4 +320,21 @@ class PlayGrid(Entity, Grid):
         for j in range(self.rows):
             for i in range(self.columns):
                 self.Get(i=i, j=j).Render()
+
+        spaceBetween = 40
+        marginArrow = 8
+        arrowHeadLength = 4
+        margin = 6
+        totalWidth = self.max * (self.cellWidth + margin * 2) + (self.max - 1) * spaceBetween
+        for value in range(self.max):
+            x = Screen.Width()/2 - totalWidth / 2 + (self.cellWidth + margin * 2) * value + (value) * spaceBetween
+            y = 80
+            Screen.DrawRect(Point(x - margin, y - margin), Point(self.cellWidth + margin * 2, self.cellHeight + margin * 2), Color.dark_grey, filled=False)
+            if value < self.max - 1:
+                a = Point(x + self.cellWidth + margin + marginArrow, y + self.cellHeight/2)
+                b = a + Point(spaceBetween - marginArrow * 2, 0)
+                Screen.DrawLine(a, b, Color.yellow)
+                Screen.DrawLine(b, b + Point(-arrowHeadLength, -arrowHeadLength), Color.yellow)
+                Screen.DrawLine(b, b + Point(-arrowHeadLength, arrowHeadLength), Color.yellow)
+            Tile.RenderBasic(value, x, y, self)
         Screen.DrawText(Point(16, 16), "Moves: {}".format(self.moves), fontSize=28, color=Color.yellow)
