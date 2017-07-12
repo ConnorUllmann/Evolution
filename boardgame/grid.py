@@ -59,8 +59,16 @@ class Grid:
         return None
 
 class Tile:
+    GlowCountFadeTimerMax = 1
+    DisplayValueChangePeriodMax = 0.1
+
     def __init__(self, value, grid, i, j):
         self.value = value
+        self.displayValue = value
+        self.displayValueTimer = 0
+        self.displayValueChangePeriod = Tile.DisplayValueChangePeriodMax
+        self.glowCountFadeTimer = 0
+        self.glowCount = 0
         self.grid = grid
         self.width = self.grid.cellWidth
         self.height = self.grid.cellHeight
@@ -68,19 +76,105 @@ class Tile:
         self.j = j
         self.x = grid.X(i) + grid.x
         self.y = grid.Y(j) + grid.y
+        self.lastDotPositions = []
 
-    def UpdateValue(self):
+    def CardinalNeighbors(self):
         l = self.grid.Get(i=self.i - 1, j=self.j)
         r = self.grid.Get(i=self.i + 1, j=self.j)
         u = self.grid.Get(i=self.i, j=self.j - 1)
         d = self.grid.Get(i=self.i, j=self.j + 1)
-        self.value = ((0 if l is None else l.value) +
-                      (0 if r is None else r.value) +
-                      (0 if u is None else u.value) +
-                      (0 if d is None else d.value)) % self.grid.max
+        return l, r, u, d
+
+    @property
+    def Value(self):
+        return self.value % self.grid.max
+
+    @property
+    def GlowCount(self):
+        return self.glowCount
+
+    @GlowCount.setter
+    def GlowCount(self, glowCount):
+        self.glowCount = glowCount
+        self.glowCountFadeTimer = Tile.GlowCountFadeTimerMax
+
+    @property
+    def DisplayValue(self):
+        return self.displayValue % self.grid.max
+
+    def UpdateValue(self):
+        l, r, u, d = self.CardinalNeighbors()
+        self.value = ((0 if l is None else l.Value) +
+                      (0 if r is None else r.Value) +
+                      (0 if u is None else u.Value) +
+                      (0 if d is None else d.Value))
+        self.displayValue = 0
+        self.grid.moves += 1
+
+    def UpdateGlowCounts(self, glowCount):
+        l, r, u, d = self.CardinalNeighbors()
+        remainingGlowCount = glowCount
+        filled = []
+        if u is not None:
+            if remainingGlowCount > u.Value:
+                filled.append(u)
+                remainingGlowCount -= u.Value
+            else:
+                u.GlowCount = remainingGlowCount
+                remainingGlowCount = 0
+
+        if r is not None:
+            if remainingGlowCount > r.Value:
+                filled.append(r)
+                remainingGlowCount -= r.Value
+            else:
+                r.GlowCount = remainingGlowCount
+                remainingGlowCount = 0
+
+        if d is not None:
+            if remainingGlowCount > d.Value:
+                filled.append(d)
+                remainingGlowCount -= d.Value
+            else:
+                d.GlowCount = remainingGlowCount
+                remainingGlowCount = 0
+
+        if l is not None:
+            if remainingGlowCount > l.Value:
+                filled.append(l)
+                remainingGlowCount -= l.Value
+            else:
+                l.GlowCount = remainingGlowCount
+                remainingGlowCount = 0
+
+        for neighbor in filled:
+            neighbor.GlowCount = neighbor.Value
+
 
     def Render(self):
-        if self.value == 0:
+        if Screen.LeftMouseDown():
+            self.glowCountFadeTimer = 0
+            self.glowCount = 0
+            self.displayValue = self.value
+
+        if self.glowCountFadeTimer > 0:
+            self.glowCountFadeTimer -= Screen.DeltaTime()
+            if self.glowCountFadeTimer <= 0:
+                self.glowCountFadeTimer = 0
+                self.glowCount = 0
+
+        if self.displayValue < self.value:
+            self.displayValueTimer += Screen.DeltaTime()
+            if self.displayValueTimer > self.displayValueChangePeriod:
+                self.displayValue += 1
+                self.UpdateGlowCounts(self.displayValue)
+                self.displayValueTimer -= self.displayValueChangePeriod
+                self.displayValueChangePeriod *= 1.1
+        else:
+            self.displayValue = self.value
+            self.displayValueChangePeriod = Tile.DisplayValueChangePeriodMax
+
+        if self.DisplayValue == 0:
             return
 
         position = Point(self.x, self.y)
@@ -95,14 +189,14 @@ class Tile:
         selectedAndPressed = selectedByMouse and Screen.LeftMouseDown()
         drawDots = (not highlightedByMouse or selectedByMouse) and not selectedAndPressed
 
-        color = self.grid.colorsNormal[self.value]
+        color = self.grid.colorsNormal[self.DisplayValue]
         if highlightedInRange:
             if not highlightedByMouse:
-                color = self.grid.colorsHighlighted[self.value]
+                color = self.grid.colorsHighlighted[self.DisplayValue]
         # if not drawDots:
         #    color = Color.black
         if selectedAndPressed:
-            color = self.grid.colorsOutline[self.value]
+            color = self.grid.colorsOutline[self.DisplayValue]
 
         dotColor = Color.black
         if selectedByMouse:
@@ -114,43 +208,50 @@ class Tile:
         showOutline = highlightedInRange and not highlightedByMouse
         shift = Point(0, -thickness) / 2 if showOutline else Point()
         if drawDots:
-            if self.value == 1:
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 2, dotDimensions, dotColor)
-            elif self.value == 2:
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, 0),
-                                dotDimensions, dotColor)
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, 0),
-                                dotDimensions, dotColor)
-            elif self.value == 3:
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, dotDimensions.y * 0.9),
-                                dotDimensions, dotColor)
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, dotDimensions.y * 0.9),
-                                dotDimensions, dotColor)
-                Screen.DrawRect(
-                    position + shift + dimensions / 2 - dotDimensions / 3 + Point(0, -dotDimensions.y * 0.9),
-                    dotDimensions, dotColor)
-            elif self.value == 4:
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, -dotDimensions.y),
-                                dotDimensions, dotColor)
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, -dotDimensions.y),
-                                dotDimensions, dotColor)
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, + dotDimensions.y),
-                                dotDimensions, dotColor)
-                Screen.DrawRect(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, + dotDimensions.y),
-                                dotDimensions, dotColor)
-        # Screen.DrawText(position + dimensions / 2 + Point(0, 2), str(self.value), self.colorText, self.fontSize, "center", "center")
+            dotPositions = []
+            if self.DisplayValue == 1:
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 2)
+            elif self.DisplayValue == 2:
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, 0))
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, 0))
+            elif self.DisplayValue == 3:
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, dotDimensions.y * 0.9))
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, dotDimensions.y * 0.9))
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(0, -dotDimensions.y * 0.9))
+            elif self.DisplayValue == 4:
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, -dotDimensions.y))
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, -dotDimensions.y))
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(-dotDimensions.x, + dotDimensions.y))
+                dotPositions.append(position + shift + dimensions / 2 - dotDimensions / 3 + Point(dotDimensions.x, + dotDimensions.y))
+            displayDotPositions = []
+            speed = 0.2
+            while len(self.lastDotPositions) < len(dotPositions):
+                self.lastDotPositions.append(position + dimensions/2)
+            for m in range(len(dotPositions)):
+                displayDotPositions.append(self.lastDotPositions[m] + (dotPositions[m] - self.lastDotPositions[m]).normalized * speed)
+            for n in range(len(displayDotPositions)):
+                dotPosition = displayDotPositions[n]
+                thisDotColor = dotColor if self.glowCount <= n else Color.yellow
+                #if self.glowCount > n:
+                #    Screen.DrawRect(dotPosition - Point(1, 1), dotDimensions + Point(2, 2), Color.orange, filled=True)
+                glowCountPercent = self.glowCountFadeTimer / Tile.GlowCountFadeTimerMax + 0.25
+                if glowCountPercent > 1:
+                    glowCountPercent = 1
+                Screen.DrawRect(dotPosition, dotDimensions, (thisDotColor[0] * glowCountPercent, thisDotColor[1] * glowCountPercent, thisDotColor[2] * glowCountPercent), filled=True)
+            self.lastDotPositions = dotPositions
+        # Screen.DrawText(position + dimensions / 2 + Point(0, 2), str(self.DisplayValue), self.colorText, self.fontSize, "center", "center")
         if showOutline:
             Screen.DrawRect(position + shift + Point(0, dimensions.y - thickness),
-                            Point(dimensions.x, thickness - shift.y), self.grid.colorsNormal[self.value], filled=True)
-            Screen.DrawLine(position, position + Point(0, dimensions.y + 1) + shift, self.grid.colorsOutline[self.value],
+                            Point(dimensions.x, thickness - shift.y), self.grid.colorsNormal[self.Value], filled=True)
+            Screen.DrawLine(position, position + Point(0, dimensions.y + 1) + shift, self.grid.colorsOutline[self.Value],
                             thickness=thickness)
             Screen.DrawLine(position + Point(dimensions.x - thickness + 1),
                             position + Point(dimensions.x - thickness + 1, dimensions.y + 1) + shift,
-                            self.grid.colorsOutline[self.value], thickness=thickness)
+                            self.grid.colorsOutline[self.Value], thickness=thickness)
             Screen.DrawLine(position + Point(0, dimensions.y - 1), position + Point(dimensions.x - 1, dimensions.y - 1),
-                            self.grid.colorsOutline[self.value], thickness=1)
+                            self.grid.colorsOutline[self.Value], thickness=1)
             Screen.DrawRect(position + Point(thickness / 2 - 1, 0) + shift,
-                            dimensions - Point(thickness - 1, thickness), self.grid.colorsOutline[self.value], filled=False,
+                            dimensions - Point(thickness - 1, thickness), self.grid.colorsOutline[self.Value], filled=False,
                             thickness=thickness)
 
 class PlayGrid(Entity, Grid):
@@ -160,11 +261,12 @@ class PlayGrid(Entity, Grid):
         self.fontSize = 32
         self.colorText = Color.white
         self.colorOutline = Color.black
-        self.colorsNormal = [(220, 128, 80), (128, 220, 80), (80, 160, 220), (220, 220, 80), (220, 80, 220)]
-        self.colorsHighlighted = [(255, 220, 180), (220, 255, 180), (180, 230, 255), (255, 255, 180), (255, 180, 255)]
-        self.colorsOutline = [(180, 96, 64), (96, 180, 64), (64, 105, 180), (180, 180, 64), (180, 64, 180)]
-        self.max = len(self.colorsNormal)
+        self.colorsNormal = [Color.black, (220, 128, 80), (128, 220, 80), (80, 160, 220), (220, 80, 220)]
+        self.colorsHighlighted = [Color.black, (255, 220, 180), (220, 255, 180), (180, 230, 255), (255, 180, 255)]
+        self.colorsOutline = [Color.black, (180, 96, 64), (96, 180, 64), (64, 105, 180), (180, 64, 180)]
+        self.max = 4#len(self.colorsNormal)
 
+        self.moves = 0
         self.imouse = None
         self.jmouse = None
 
@@ -195,4 +297,4 @@ class PlayGrid(Entity, Grid):
         for j in range(self.rows):
             for i in range(self.columns):
                 self.Get(i=i, j=j).Render()
-        Screen.DrawText(Screen.MousePosition(), str(Screen.DeltaTime()))
+        Screen.DrawText(Point(16, 16), "Moves: {}".format(self.moves), fontSize=28, color=Color.yellow)
