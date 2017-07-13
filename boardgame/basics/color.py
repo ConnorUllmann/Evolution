@@ -10,6 +10,14 @@ class Color:
     def invert(color):
         return (255 - color[0], 255 - color[1], 255 - color[2])
 
+    @staticmethod
+    def multiply(color, multiplicant):
+        return (color[0] * multiplicant, color[1] * multiplicant, color[2] * multiplicant)
+
+    @staticmethod
+    def lerp(A, B, t):
+        return ((B[0] - A[0]) * t + A[0], (B[1] - A[1]) * t + A[1], (B[2] - A[2]) * t + A[2])
+
     red = (255, 0, 0)
     green = (0, 255, 0)
     blue = (0, 0, 255)

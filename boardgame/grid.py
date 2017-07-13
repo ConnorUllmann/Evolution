@@ -67,7 +67,6 @@ class Tile:
         self.displayValue = value
         self.displayValueTimer = 0
         self.displayValueChangePeriod = Tile.DisplayValueChangePeriodMax
-        self.glowCountFadeTimer = 0
         self.glowCount = 0
         self.grid = grid
         self.width = self.grid.cellWidth
@@ -96,7 +95,7 @@ class Tile:
     @GlowCount.setter
     def GlowCount(self, glowCount):
         self.glowCount = glowCount
-        self.glowCountFadeTimer = Tile.GlowCountFadeTimerMax
+        self.grid.glowCountFadeTimer = Tile.GlowCountFadeTimerMax
 
     @property
     def DisplayValue(self):
@@ -110,6 +109,8 @@ class Tile:
                       (0 if d is None else d.Value))
         self.displayValue = 0
         self.grid.moves += 1
+        if self.value == 0:
+            self.grid.explodeTimer = PlayGrid.ExplodeTimerMax
 
     def UpdateGlowCounts(self, glowCount):
         l, r, u, d = self.CardinalNeighbors()
@@ -180,30 +181,30 @@ class Tile:
     def RenderBasic(value, x, y, grid):
         position = Point(x, y)
         dimensions = Point(grid.cellWidth, grid.cellHeight)
-        dotDimensions = Point(4, 4)
 
         color = grid.colorsNormal[value]
         Screen.DrawRect(position, dimensions, color)
 
-        for dotPosition in Tile.GetDotPositions(value, position, dimensions, dotDimensions):
-            Screen.DrawRect(dotPosition, dotDimensions, Color.black, filled=True)
+        for dotPosition in Tile.GetDotPositions(value, position, dimensions, grid.dotDimensions):
+            Screen.DrawRect(dotPosition, grid.dotDimensions, Color.black, filled=True)
+
+    @staticmethod
+    def RenderDot(x, y, color, lightness, grid):
+        if lightness > 1:
+            lightness = 1
+        elif lightness < 0:
+            lightness = 0
+        color = (color[0] * lightness, color[1] * lightness, color[2] * lightness)
+        Screen.DrawRect(Point(x, y), grid.dotDimensions, color, filled=True)
 
     def Render(self):
-        if Screen.LeftMouseDown():
-            self.glowCountFadeTimer = 0
-            self.glowCount = 0
-            self.displayValue = self.value
-
-        if self.glowCountFadeTimer > 0:
-            self.glowCountFadeTimer -= Screen.DeltaTime()
-            if self.glowCountFadeTimer <= 0:
-                self.glowCountFadeTimer = 0
-                self.glowCount = 0
 
         if self.displayValue < self.value:
             self.displayValueTimer += Screen.DeltaTime()
             if self.displayValueTimer > self.displayValueChangePeriod:
                 self.displayValue += 1
+                if self.displayValue == self.value and self.DisplayValue == 0:
+                    self.grid.explodeTimer = PlayGrid.ExplodeTimerMax
                 self.UpdateGlowCounts(self.displayValue)
                 self.displayValueTimer -= self.displayValueChangePeriod
                 self.displayValueChangePeriod *= 1.1
@@ -216,13 +217,12 @@ class Tile:
 
         position = Point(self.x, self.y)
         dimensions = Point(self.width, self.height)
-        dotDimensions = Point(4, 4)
 
         imouseCurrent, jmouseCurrent = self.grid.iMouseCurrent, self.grid.jMouseCurrent
 
         highlightedByMouse = imouseCurrent == self.i and jmouseCurrent == self.j
         highlightedInRange = (imouseCurrent == self.i and self.j - 1 <= jmouseCurrent <= self.j + 1) or (self.i - 1 <= imouseCurrent <= self.i + 1 and jmouseCurrent == self.j)
-        selectedByMouse = self.grid.imouse is not None and self.grid.jmouse is not None and self.grid.imouse == self.i and self.grid.jmouse == self.j
+        selectedByMouse = self.grid.selectedTile == self
         selectedAndPressed = selectedByMouse and Screen.LeftMouseDown()
         drawDots = (not highlightedByMouse or selectedByMouse) and not selectedAndPressed
 
@@ -230,10 +230,14 @@ class Tile:
         if highlightedInRange:
             if not highlightedByMouse:
                 color = self.grid.colorsHighlighted[self.DisplayValue]
+        if self.grid.glowCountFadeTimer > 0 and self in self.grid.selectedTileCardinalNeighbors:
+            color = Color.lerp(color, Color.dark_grey, min(6 * self.grid.glowCountFadeTimer / Tile.GlowCountFadeTimerMax, 1))
         # if not drawDots:
         #    color = Color.black
         if selectedAndPressed:
             color = self.grid.colorsOutline[self.DisplayValue]
+
+
 
         dotColor = Color.black
         if selectedByMouse:
@@ -245,7 +249,7 @@ class Tile:
         showOutline = highlightedInRange and not highlightedByMouse
         shift = Point(0, -thickness) / 2 if showOutline else Point()
         if drawDots:
-            dotPositions = Tile.GetDotPositions(self.DisplayValue, position + shift, dimensions, dotDimensions)
+            dotPositions = Tile.GetDotPositions(self.DisplayValue, position + shift, dimensions, self.grid.dotDimensions)
             displayDotPositions = []
             speed = 0.2
             while len(self.lastDotPositions) < len(dotPositions):
@@ -253,14 +257,9 @@ class Tile:
             for m in range(len(dotPositions)):
                 displayDotPositions.append(self.lastDotPositions[m] + (dotPositions[m] - self.lastDotPositions[m]).normalized * speed)
             for n in range(len(displayDotPositions)):
-                dotPosition = displayDotPositions[n]
-                thisDotColor = dotColor if self.glowCount <= n else Color.yellow
-                #if self.glowCount > n:
-                #    Screen.DrawRect(dotPosition - Point(1, 1), dotDimensions + Point(2, 2), Color.orange, filled=True)
-                glowCountPercent = self.glowCountFadeTimer / Tile.GlowCountFadeTimerMax + 0.25
-                if glowCountPercent > 1:
-                    glowCountPercent = 1
-                Screen.DrawRect(dotPosition, dotDimensions, (thisDotColor[0] * glowCountPercent, thisDotColor[1] * glowCountPercent, thisDotColor[2] * glowCountPercent), filled=True)
+                lightness = self.grid.glowCountFadeTimer / Tile.GlowCountFadeTimerMax + 0.25
+                color = dotColor if self.glowCount <= n else Color.yellow
+                self.RenderDot(displayDotPositions[n].x, displayDotPositions[n].y, color, lightness, self.grid)
             self.lastDotPositions = dotPositions
         # Screen.DrawText(position + dimensions / 2 + Point(0, 2), str(self.DisplayValue), self.colorText, self.fontSize, "center", "center")
         if showOutline:
@@ -278,6 +277,8 @@ class Tile:
                             thickness=thickness)
 
 class PlayGrid(Entity, Grid):
+    ExplodeTimerMax = 2
+
     def __init__(self, x, y, width, height, cellWidth, cellHeight):
         Grid.__init__(self, width, height, cellWidth, cellHeight)
         Entity.__init__(self, x, y)
@@ -288,10 +289,12 @@ class PlayGrid(Entity, Grid):
         self.colorsHighlighted = [Color.black, (255, 220, 180), (220, 255, 180), (180, 230, 255), (255, 180, 255)]
         self.colorsOutline = [Color.black, (180, 96, 64), (96, 180, 64), (64, 105, 180), (180, 64, 180)]
         self.max = 4#len(self.colorsNormal)
+        self.dotDimensions = Point(4, 4)
+        self.glowCountFadeTimer = 0
+        self.explodeTimer = 0
 
         self.moves = 0
-        self.imouse = None
-        self.jmouse = None
+        self.selectedTile = None
 
         for j in range(self.rows):
             for i in range(self.columns):
@@ -308,33 +311,91 @@ class PlayGrid(Entity, Grid):
     def Update(self):
         if Screen.LeftMouseDown():
             x, y = Screen.MousePosition() - self
-            self.imouse, self.jmouse = self.i(x), self.j(y)
+            i, j = self.i(x), self.j(y)
+            self.selectedTile = self.Get(i=i, j=j)
+
+            self.glowCountFadeTimer = 0
+            for tiles in self.values:
+                for tile in tiles:
+                    tile.glowCount = 0
+                    tile.displayValue = tile.value
+
+        if self.glowCountFadeTimer > 0:
+            self.glowCountFadeTimer -= Screen.DeltaTime()
+            if self.glowCountFadeTimer <= 0:
+                self.glowCountFadeTimer = 0
+                for tilesX in self.values:
+                    for tiles in tilesX:
+                        tiles.glowCount = 0
+        if self.explodeTimer > 0:
+            self.explodeTimer -= Screen.DeltaTime()
+            if self.explodeTimer <= 0:
+                self.explodeTimer = 0
 
         if Screen.LeftMouseReleased():
-            i, j = self.imouse, self.jmouse
-            tile = self.Get(i=i, j=j)
-            if tile is not None:
-                tile.UpdateValue()
+            if self.selectedTile is not None:
+                self.selectedTile.UpdateValue()
 
     def Render(self):
+        spaceBetween = 40
+        arrowHeadLength = 4
+        marginArrow = 8
+        margin = 6
+        marginBox = 3
+        marginGrid = 4
+
+        Screen.DrawRect(self - Point(1, 1), Point(self.width, self.height) + 2 * Point(1, 1),
+                        Color.white, filled=False)
+        Screen.DrawRect(self - marginGrid * Point(1.5, 1.5), Point(self.width, self.height) + 2 * marginGrid * Point(1.5, 1.5),
+                        Color.medium_grey, filled=False)
+        Screen.DrawRect(self - marginGrid * Point(2.5, 2.5), Point(self.width, self.height) + 2 * marginGrid * Point(2.5, 2.5),
+                        Color.dark_grey, filled=False)
+
+        if self.selectedTile is not None:
+            self.selectedTileCardinalNeighbors = self.selectedTile.CardinalNeighbors()
         for j in range(self.rows):
             for i in range(self.columns):
                 self.Get(i=i, j=j).Render()
 
-        spaceBetween = 40
-        marginArrow = 8
-        arrowHeadLength = 4
-        margin = 6
         totalWidth = self.max * (self.cellWidth + margin * 2) + (self.max - 1) * spaceBetween
-        for value in range(self.max):
-            x = Screen.Width()/2 - totalWidth / 2 + (self.cellWidth + margin * 2) * value + (value) * spaceBetween
+        for valueTrue in range(self.max):
+            value = (valueTrue+1+self.max) % self.max
+            x = Screen.Width()/2 - totalWidth / 2 + (self.cellWidth + margin * 2) * valueTrue + valueTrue * spaceBetween
             y = 80
-            Screen.DrawRect(Point(x - margin, y - margin), Point(self.cellWidth + margin * 2, self.cellHeight + margin * 2), Color.dark_grey, filled=False)
-            if value < self.max - 1:
-                a = Point(x + self.cellWidth + margin + marginArrow, y + self.cellHeight/2)
-                b = a + Point(spaceBetween - marginArrow * 2, 0)
+
+            if value == 0:
+                explodeTimerPercent = self.explodeTimer / PlayGrid.ExplodeTimerMax
+                explodeDistance = 40 * (1 - explodeTimerPercent ** 6)
+                if 0 < explodeTimerPercent < 1:
+                    Screen.DrawRect(Point(x, y) - Point(1, 1) * explodeDistance,
+                                    Point(self.cellWidth, self.cellHeight) + Point(1, 1) * 2 * explodeDistance,
+                                    Color.lerp(Color.black, Color.yellow, explodeTimerPercent ** 6))
+
+            if not Screen.LeftMouseDown() and self.selectedTile is not None and value == self.selectedTile.DisplayValue:
+                v = self.glowCountFadeTimer / Tile.GlowCountFadeTimerMax
+                color = (255 * v, 255 * v, 0)
+                Screen.DrawRect(Point(x - marginBox, y - marginBox), Point(self.cellWidth + marginBox * 2, self.cellHeight + marginBox * 2), color, filled=True)
+
+
+            Screen.DrawRect(Point(x - margin, y - margin),
+                            Point(self.cellWidth + margin * 2, self.cellHeight + margin * 2), Color.dark_grey,
+                            filled=False)
+
+            if valueTrue >= 1:
+                b = Point(x - margin - marginArrow, y + self.cellHeight/2)
+                a = b + Point(-spaceBetween + marginArrow * 2, 0)
                 Screen.DrawLine(a, b, Color.yellow)
                 Screen.DrawLine(b, b + Point(-arrowHeadLength, -arrowHeadLength), Color.yellow)
                 Screen.DrawLine(b, b + Point(-arrowHeadLength, arrowHeadLength), Color.yellow)
+
             Tile.RenderBasic(value, x, y, self)
+            if self.selectedTile is not None:
+                rows = math.floor(self.selectedTile.displayValue / self.max)
+                cols = self.selectedTile.displayValue % self.max
+                rowSeparationDistance = 4
+                for row in range(rows + (1 if valueTrue < cols else 0)):
+                    dotPosition = Point(x + self.cellWidth / 2, y + self.cellHeight + 20 + (self.dotDimensions.y + rowSeparationDistance) * row)
+                    dotColor = Color.multiply(Color.yellow, min(8 * self.glowCountFadeTimer / Tile.GlowCountFadeTimerMax, 1))
+                    dotLightness = 1
+                    Tile.RenderDot(dotPosition.x, dotPosition.y, dotColor, dotLightness, self)
         Screen.DrawText(Point(16, 16), "Moves: {}".format(self.moves), fontSize=28, color=Color.yellow)
