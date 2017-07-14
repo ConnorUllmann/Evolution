@@ -4,9 +4,9 @@ from grid import PlayGrid
 def Begin():
     width = 400
     height = 400
-    cellWidth = 40
-    cellHeight= 40
-    grid = PlayGrid(100, 200, width, height, cellWidth, cellHeight)
+    cellWidth = 50
+    cellHeight= 50
+    grid = PlayGrid(50, 250, width, height, cellWidth, cellHeight)
 
 def Update():
     pass
@@ -15,4 +15,4 @@ def Render():
     pass
 
 if __name__ == '__main__':
-    Screen.StartGame(Begin, Update, Render, width=600, height=700)
+    Screen.StartGame(Begin, Update, Render, width=500, height=700)

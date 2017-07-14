@@ -285,10 +285,10 @@ class PlayGrid(Entity, Grid):
         self.fontSize = 32
         self.colorText = Color.white
         self.colorOutline = Color.black
-        self.colorsNormal = [Color.black, (220, 128, 80), (128, 220, 80), (80, 160, 220), (220, 80, 220)]
-        self.colorsHighlighted = [Color.black, (255, 220, 180), (220, 255, 180), (180, 230, 255), (255, 180, 255)]
-        self.colorsOutline = [Color.black, (180, 96, 64), (96, 180, 64), (64, 105, 180), (180, 64, 180)]
-        self.max = 4#len(self.colorsNormal)
+        self.colorsNormal = [Color.black, (220, 128, 80), (128, 220, 80), (80, 160, 220), (220, 80, 180), (80, 220, 220)]
+        self.colorsHighlighted = [Color.black, (255, 220, 180), (220, 255, 180), (180, 230, 255), (255, 180, 230), (180, 255, 255)]
+        self.colorsOutline = [Color.black, (180, 96, 64), (96, 180, 64), (64, 105, 180),(180, 64, 140),  (64, 180, 180)]
+        self.max = 5#len(self.colorsNormal)
         self.dotDimensions = Point(4, 4)
         self.glowCountFadeTimer = 0
         self.explodeTimer = 0
@@ -338,7 +338,8 @@ class PlayGrid(Entity, Grid):
 
     def Render(self):
         spaceBetween = 40
-        arrowHeadLength = 4
+        arrowHeadLength = 6
+        arrowThickness = 5
         marginArrow = 8
         margin = 6
         marginBox = 3
@@ -371,31 +372,37 @@ class PlayGrid(Entity, Grid):
                                     Point(self.cellWidth, self.cellHeight) + Point(1, 1) * 2 * explodeDistance,
                                     Color.lerp(Color.black, Color.yellow, explodeTimerPercent ** 6))
 
+            distanceTileMarginBottomToDots = 20
+            dotRowSeparationDistance = 4
+            neighborCount = 4
+
+            dotSectionHeight = distanceTileMarginBottomToDots + (self.dotDimensions.y + dotRowSeparationDistance) * neighborCount
+
             if not Screen.LeftMouseDown() and self.selectedTile is not None and value == self.selectedTile.DisplayValue:
-                v = self.glowCountFadeTimer / Tile.GlowCountFadeTimerMax
+                v = min(1, 4 * self.glowCountFadeTimer / Tile.GlowCountFadeTimerMax)
+                v = 1 - min(max(1-10*v**2, 1-10*(v-0.5)**2, 0), 1)
                 color = (255 * v, 255 * v, 0)
-                Screen.DrawRect(Point(x - marginBox, y - marginBox), Point(self.cellWidth + marginBox * 2, self.cellHeight + marginBox * 2), color, filled=True)
+                Screen.DrawRect(Point(x - marginBox, y - marginBox), Point(self.cellWidth - 1 + marginBox * 2, self.cellHeight + marginBox * 2 + dotSectionHeight), color, filled=False, thickness=4)
 
 
             Screen.DrawRect(Point(x - margin, y - margin),
-                            Point(self.cellWidth + margin * 2, self.cellHeight + margin * 2), Color.dark_grey,
+                            Point(self.cellWidth + margin * 2, self.cellHeight + margin * 2 + dotSectionHeight), Color.dark_grey,
                             filled=False)
 
             if valueTrue >= 1:
                 b = Point(x - margin - marginArrow, y + self.cellHeight/2)
                 a = b + Point(-spaceBetween + marginArrow * 2, 0)
-                Screen.DrawLine(a, b, Color.yellow)
-                Screen.DrawLine(b, b + Point(-arrowHeadLength, -arrowHeadLength), Color.yellow)
-                Screen.DrawLine(b, b + Point(-arrowHeadLength, arrowHeadLength), Color.yellow)
+                Screen.DrawLine(a, b, Color.yellow, thickness=arrowThickness)
+                Screen.DrawLine(b, b + Point(-arrowHeadLength, -arrowHeadLength), Color.yellow, thickness=arrowThickness)
+                Screen.DrawLine(b, b + Point(-arrowHeadLength, arrowHeadLength), Color.yellow, thickness=arrowThickness)
 
             Tile.RenderBasic(value, x, y, self)
             if self.selectedTile is not None:
                 rows = math.floor(self.selectedTile.displayValue / self.max)
                 cols = self.selectedTile.displayValue % self.max
-                rowSeparationDistance = 4
                 for row in range(rows + (1 if valueTrue < cols else 0)):
-                    dotPosition = Point(x + self.cellWidth / 2, y + self.cellHeight + 20 + (self.dotDimensions.y + rowSeparationDistance) * row)
+                    dotPosition = Point(x + self.cellWidth / 2, y + self.cellHeight + distanceTileMarginBottomToDots + (self.dotDimensions.y + dotRowSeparationDistance) * row)
                     dotColor = Color.multiply(Color.yellow, min(8 * self.glowCountFadeTimer / Tile.GlowCountFadeTimerMax, 1))
                     dotLightness = 1
-                    Tile.RenderDot(dotPosition.x, dotPosition.y, dotColor, dotLightness, self)
+                    Tile.RenderDot(dotPosition.x - self.dotDimensions.x/2, dotPosition.y - self.dotDimensions.y/2, dotColor, dotLightness, self)
         Screen.DrawText(Point(16, 16), "Moves: {}".format(self.moves), fontSize=28, color=Color.yellow)
